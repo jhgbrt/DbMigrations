@@ -1,0 +1,1 @@
+ALTER TABLE CUSTOMER ADD LAST_NAME nvarchar2(10) not null
