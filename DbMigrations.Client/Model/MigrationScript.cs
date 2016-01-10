@@ -8,7 +8,7 @@ namespace DbMigrations.Client.Model
         public MigrationScript(string key, Migration migration, Script script)
         {
             if (key == null)
-                throw new ArgumentNullException("key");
+                throw new ArgumentNullException(nameof(key));
             if (migration == null && script == null)
                     throw new ArgumentException("Both migration and script are null");
             if (migration != null && script != null && migration.ScriptName != script.ScriptName)
@@ -17,10 +17,10 @@ namespace DbMigrations.Client.Model
             Migration = migration;
             Script = script;
         }
-        public Migration Migration { get; private set; }
-        public Script Script { get; private set; }
+        public Migration Migration { get; }
+        public Script Script { get; }
 
-        public string Name { get; private set; }
+        public string Name { get; }
 
         public MigrationScript Next { get; set; }
 
@@ -56,13 +56,7 @@ namespace DbMigrations.Client.Model
             return $"{Migration} / {Script}";
         }
 
-        public bool IsUnexpectedExtraScript
-        {
-            get
-            {
-                return Script != null && Migration == null && Next != null;
-            }
-        }
+        public bool IsUnexpectedExtraScript => Script != null && Migration == null && Next != null;
 
         public override bool Equals(object obj)
         {
@@ -83,7 +77,7 @@ namespace DbMigrations.Client.Model
         {
             unchecked
             {
-                return ((Migration != null ? Migration.GetHashCode() : 0)*397) ^ (Script != null ? Script.GetHashCode() : 0);
+                return (Migration?.GetHashCode() ?? 0)*397 ^ (Script?.GetHashCode() ?? 0);
             }
         }
 

@@ -9,9 +9,15 @@ namespace DbMigrations.Client.Application
 {
     class BufferedWriter
     {
-        Queue<string> lines = new Queue<string>();
+        readonly Logger Logger;
+        readonly Queue<string> lines = new Queue<string>();
         private int _flush;
         private int _context = 2;
+
+        public BufferedWriter(Logger logger)
+        {
+            Logger = logger;
+        }
 
         public void Write(string text)
         {
@@ -44,19 +50,29 @@ namespace DbMigrations.Client.Application
 
     public class MigrationManager : IMigrationManager
     {
+        private Logger Logger { get; }
         private readonly IScriptFileRepository _scriptFileRepository;
+        private readonly IMigrationRepository _migrationRepository;
         private readonly IDatabase _database;
 
-        public MigrationManager(IScriptFileRepository scriptFileRepository, IDatabase database)
+        public MigrationManager(
+            IScriptFileRepository scriptFileRepository, 
+            IMigrationRepository migrationRepository,
+            IDatabase database, 
+            Logger logger)
         {
             _scriptFileRepository = scriptFileRepository;
+            _migrationRepository = migrationRepository;
             _database = database;
+            Logger = logger;
         }
 
         public bool MigrateSchema(bool whatif, bool reInit = false)
         {
             if (reInit)
+            {
                 _database.ClearAll();
+            }
 
             if (!whatif)
                 _database.EnsureMigrationsTable();
@@ -80,7 +96,7 @@ namespace DbMigrations.Client.Application
                         continue;
                     if (migration.HasChangedOnDisk)
                     {
-                        var writer = new BufferedWriter();
+                        var writer = new BufferedWriter(Logger);
                         var diffs = Diff.Compute(migration.Migration.Content, migration.Script.Content);
                         foreach (var diff in diffs)
                         {
@@ -100,7 +116,7 @@ namespace DbMigrations.Client.Application
                         
                     }
                 }
-                Logger.WriteLine();
+                Logger.Line();
                 return false;
             }
 
@@ -109,7 +125,7 @@ namespace DbMigrations.Client.Application
        
         private List<MigrationScript> GetMigrations()
         {
-            var migrations = _database.GetMigrations();
+            var migrations = _migrationRepository.GetMigrations();
 
             var scripts = _scriptFileRepository.GetScripts(ScriptKind.Migration);
 
@@ -144,35 +160,35 @@ namespace DbMigrations.Client.Application
             foreach (var migration in migrations)
             {
                 bool result = true;
-                Logger.WriteInfo(string.Format("[{0}] ", migration.Script.Collection));
+                Logger.Info($"[{migration.Script?.Collection}] ");
                 if (migration.IsConsistent)
                 {
-                    Logger.WriteInfo(string.Format("{0} was already applied.", migration.Name));
+                    Logger.Info($"{migration.Name} was already applied.");
                 }
                 else if (migration.IsNewMigration)
                 {
                     var script = migration.Script;
-                    Logger.WriteInfo(string.Format("{0} - applying... ", migration.Name).PadRight(maxFileNameLength + 4));
+                    Logger.Info($"{migration.Name} - applying... ".PadRight(maxFileNameLength + 4));
                     if (!whatif)
                     {
                         try
                         {
-                            _database.ApplyMigration(new Migration(script.ScriptName, script.Checksum, DateTime.UtcNow, script.Content));
-                            Logger.WriteOk();
+                            _migrationRepository.ApplyMigration(new Migration(script.ScriptName, script.Checksum, DateTime.UtcNow, script.Content));
+                            Logger.Ok();
                         }
                         catch (Exception e)
                         {
-                            Logger.WriteError("ERROR: " + e.Message);
+                            Logger.Error("ERROR: " + e.Message);
                             result = false;
                         }
                     }
                 }
                 else
                 {
-                    Logger.WriteError(string.Format("ERROR: {0}", migration).PadRight(maxFileNameLength + 4));
+                    Logger.Error($"ERROR: {migration}".PadRight(maxFileNameLength + 4));
                     result = false;
                 }
-                Logger.WriteLine();
+                Logger.Line();
                 if (!result)
                     return false;
             }
@@ -188,14 +204,14 @@ namespace DbMigrations.Client.Application
 
             foreach (var script in scripts)
             {
-                Logger.WriteInfo(string.Format("[{0}", script.Collection).PadRight(maxFolderNameLength + 1) + "] ");
-                Logger.WriteInfo((script.ScriptName + "... ").PadRight(maxFileNameLength + 4));
+                Logger.Info($"[{script.Collection}".PadRight(maxFolderNameLength + 1) + "] ");
+                Logger.Info((script.ScriptName + "... ").PadRight(maxFileNameLength + 4));
                 try
                 {
                     if (!whatif)
                     {
                         _database.RunInTransaction(script.Content);
-                        Logger.WriteOk();
+                        Logger.Ok();
                     }
                 }
                 catch (Exception e)
@@ -207,9 +223,6 @@ namespace DbMigrations.Client.Application
             }
             return true;
         }
-
-
-
     }
 
     public static class Ex

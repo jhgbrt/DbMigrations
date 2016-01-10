@@ -68,7 +68,10 @@ namespace DbMigrations.Client
                     "schema=", "Db schema for Migrations table (if different from the default for this user)", s => Schema = s
                 },
                 {
-                    "reinitialize", "Will clear the database and re-run all migrations. Use with care!", s => ReInit = true
+                    "reinitialize", "Will clear the database and re-run all migrations. Unless --force is specified, this is only allowed for local databases. Use with care!", s => ReInit = true
+                },
+                {
+                    "force", "When used with --reinitialize, allows to restage a remote db. Use with care!", s => Force = true
                 }
             };
         }
@@ -99,7 +102,7 @@ namespace DbMigrations.Client
                 if (string.IsNullOrEmpty(_password)) errors.AppendLine("No password");
             }
 
-            if (ReInit)
+            if (ReInit && !Force)
             {
                 var ds = (string)ConnectionStringBuilder["Data Source"];
                 if (!ds.Contains("localhost") && !ds.Contains(Environment.MachineName) && !ds.StartsWith(".\\"))
@@ -114,6 +117,8 @@ namespace DbMigrations.Client
 
             return true;
         }
+
+        public bool Force { get; private set; }
 
         public static Config Create(string[] args)
         {

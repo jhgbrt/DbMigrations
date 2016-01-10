@@ -9,6 +9,7 @@ namespace DbMigrations.Client
 {
     public class Program
     {
+        private static readonly Logger Logger = new Logger();
         public static int Main(string[] args)
         {
             var config = Config.Create(args);
@@ -22,27 +23,24 @@ namespace DbMigrations.Client
             var stringBuilder = new StringBuilder();
             if (!config.IsValid(stringBuilder))
             {
-                Logger.ErrorLine("Invalid configuration!");
-                Logger.ErrorLine(stringBuilder.ToString());
+                Logger
+                    .ErrorLine("Invalid configuration!")
+                    .ErrorLine(stringBuilder.ToString());
                 PrintHelp(config);
                 return 1;
             }
 
             using (var db = new Db(config.ConnectionString, config.ProviderName))
             {
-                var database = Database.From(db, config);
-                var folder = new DirectoryInfo(config.Directory);
-
-                IScriptFileRepository scripts = new ScriptFileRepository(folder);
-                IMigrationManager manager = new MigrationManager(scripts, database);
-
+                var manager = CreateMigrationManager(config, db);
                 try
                 {
 
-                    Logger.InfoLine("db migration utility (c) Jeroen Haegebaert 2016");
-                    Logger.WriteLine();
+                    Logger
+                        .InfoLine("db migration utility (c) Jeroen Haegebaert 2016")
+                        .Line();
 
-                    if (config.ReInit)
+                    if (config.ReInit && !config.Force)
                     {
                         Logger.WarnLine("Reinitializing the database from scratch, are you sure? Y/[N]");
                         var readLine = Console.ReadLine();
@@ -51,24 +49,27 @@ namespace DbMigrations.Client
                     }
 
 
-                    Logger.WriteInfo("Connecting to the database... ");
+                    Logger.Info("Connecting to the database... ");
                     db.Connect();
                     
-                    Logger.OkLine();
-                    Logger.WriteLine();
-                    Logger.InfoLine("Performing database migrations");
-                    Logger.InfoLine("==============================");
-                    Logger.WriteLine();
+                    Logger
+                        .OkLine()
+                        .Line()
+                        .InfoLine("Performing database migrations")
+                        .InfoLine("==============================")
+                        .Line();
+
                     if (!manager.MigrateSchema(config.WhatIf, config.ReInit))
                     {
                         Logger.InfoLine("Errors occurred. Use --help for for documentation.");
                         return 1;
                     }
 
-                    Logger.WriteLine();
-                    Logger.InfoLine("Running additional scripts");
-                    Logger.InfoLine("==========================");
-                    Logger.WriteLine();
+                    Logger
+                        .Line()
+                        .InfoLine("Running additional scripts")
+                        .InfoLine("==========================")
+                        .Line();
 
                     if (!manager.ExecuteScripts(config.WhatIf))
                     {
@@ -76,8 +77,9 @@ namespace DbMigrations.Client
                         return 1;
                     }
 
-                    Logger.WriteLine();
-                    Logger.InfoLine("Migrations were successfully run");
+                    Logger
+                        .Line()
+                        .InfoLine("Migrations were successfully run");
                 }
                 catch (Exception e)
                 {
@@ -88,60 +90,74 @@ namespace DbMigrations.Client
             }
         }
 
+        private static IMigrationManager CreateMigrationManager(Config config, IDb db)
+        {
+            var database = DatabaseFactory.FromConfig(db, config);
+            var repository = new MigrationRepository(database);
+            var folder = new DirectoryInfo(config.Directory);
+            var scripts = new ScriptFileRepository(folder);
+            var manager = new MigrationManager(scripts, repository, database, Logger);
+            return manager;
+        }
+
         private static void PrintHelp(Config config)
         {
-            Logger.InfoLine("Use this utility to execute DDL and SQL scripts against a database.");
-            Logger.InfoLine("");
-            Logger.InfoLine("Usage: migrate.exe [options]");
-            Logger.InfoLine("Options:");
-            Logger.InfoLine(config.GetHelp());
+            Logger
+                .InfoLine("Use this utility to execute DDL and SQL scripts against a database.")
+                .InfoLine("")
+                .InfoLine("Usage: migrate.exe [options]")
+                .InfoLine("Options:")
+                .InfoLine(config.GetHelp());
+
             if (!config.Help)
                 return;
-            Logger.InfoLine("Use this utility to execute DDL and SQL scripts against a database");
-            Logger.InfoLine("");
-            Logger.InfoLine("By convention, first all scripts in a folder called 'Migrations'");
-            Logger.InfoLine("will be executed, in strict alphabetical order. Scripts may be");
-            Logger.InfoLine("organized in subfolders, in which case the folders will also be");
-            Logger.InfoLine("treated in alphabetical order. However, once a migration script");
-            Logger.InfoLine("has been performed from a 'newer' folder, it is not allowed to");
-            Logger.InfoLine("add new migrations in an 'earlier' folder.");
-            Logger.InfoLine("");
-            Logger.InfoLine("Migrations are tracked in the database with a checksum. Once a ");
-            Logger.InfoLine("migration has been performed, it can not be changed. Also, new");
-            Logger.InfoLine("versions of a migration package should always include all previous");
-            Logger.InfoLine("migrations");
-            Logger.InfoLine("");
-            Logger.InfoLine("After the migrations have been run, *all* scripts in *all* other");
-            Logger.InfoLine("subfolders are executed. These scripts can be data loads, updates of");
-            Logger.InfoLine("views or stored procedures, etc. The only limitation is that these");
-            Logger.InfoLine("scripts should be idempotent at all times, and consistent with the");
-            Logger.InfoLine("current state of migrations");
-            Logger.InfoLine("");
-            Logger.InfoLine("Example folder structure:");
-            Logger.InfoLine("");
-            Logger.InfoLine("   Scripts");
-            Logger.InfoLine("   ├───01_DataLoads");
-            Logger.InfoLine("   |   ├───01_Phase1");
-            Logger.InfoLine("   |   |   ├───001_referencedata1.sql");
-            Logger.InfoLine("   |   |   └───002_samples.sql");
-            Logger.InfoLine("   |   └───02_Phase2");
-            Logger.InfoLine("   |       └───001_referencedata2.sql");
-            Logger.InfoLine("   ├───02_ViewsAndSprocs");
-            Logger.InfoLine("   |   ├───001_views.sql");
-            Logger.InfoLine("   |   └───002_sprocs.sql");
-            Logger.InfoLine("   └───Migrations");
-            Logger.InfoLine("       ├───001_migration1.sql");
-            Logger.InfoLine("       └───002_migration2.sql");
-            Logger.InfoLine("");
-            Logger.InfoLine("Scripts in this structure will be executed in this order:");
-            Logger.InfoLine("");
-            Logger.InfoLine(@"Scripts\Migrations\001_migration1.sql");
-            Logger.InfoLine(@"Scripts\Migrations\002_migration2.sql");
-            Logger.InfoLine(@"Scripts\01_DataLoads\01_Phase1\001_referencedata1.sql");
-            Logger.InfoLine(@"Scripts\01_DataLoads\01_Phase1\002_samples.sql");
-            Logger.InfoLine(@"Scripts\01_DataLoads\02_Phase2\002_referencedata2.sql");
-            Logger.InfoLine(@"Scripts\02_ViewsAndSprocs\001_views.sql");
-            Logger.InfoLine(@"Scripts\02_ViewsAndSprocs\002_sprocs.sql");
+
+            Logger
+                .InfoLine("Use this utility to execute DDL and SQL scripts against a database")
+                .InfoLine("")
+                .InfoLine("By convention, first all scripts in a folder called 'Migrations'")
+                .InfoLine("will be executed, in strict alphabetical order. Scripts may be")
+                .InfoLine("organized in subfolders, in which case the folders will also be")
+                .InfoLine("treated in alphabetical order. However, once a migration script")
+                .InfoLine("has been performed from a 'newer' folder, it is not allowed to")
+                .InfoLine("add new migrations in an 'earlier' folder.")
+                .InfoLine("")
+                .InfoLine("Migrations are tracked in the database with a checksum. Once a ")
+                .InfoLine("migration has been performed, it can not be changed. Also, new")
+                .InfoLine("versions of a migration package should always include all previous")
+                .InfoLine("migrations")
+                .Line()
+                .InfoLine("After the migrations have been run, *all* scripts in *all* other")
+                .InfoLine("subfolders are executed. These scripts can be data loads, updates of")
+                .InfoLine("views or stored procedures, etc. The only limitation is that these")
+                .InfoLine("scripts should be idempotent at all times, and consistent with the")
+                .InfoLine("current state of migrations")
+                .InfoLine("")
+                .InfoLine("Example folder structure:")
+                .InfoLine("")
+                .InfoLine("   Scripts")
+                .InfoLine("   ├───01_DataLoads")
+                .InfoLine("   |   ├───01_Phase1")
+                .InfoLine("   |   |   ├───001_referencedata1.sql")
+                .InfoLine("   |   |   └───002_samples.sql")
+                .InfoLine("   |   └───02_Phase2")
+                .InfoLine("   |       └───001_referencedata2.sql")
+                .InfoLine("   ├───02_ViewsAndSprocs")
+                .InfoLine("   |   ├───001_views.sql")
+                .InfoLine("   |   └───002_sprocs.sql")
+                .InfoLine("   └───Migrations")
+                .InfoLine("       ├───001_migration1.sql")
+                .InfoLine("       └───002_migration2.sql")
+                .Line()
+                .InfoLine("Scripts in this structure will be executed in this order:")
+                .InfoLine("")
+                .InfoLine(@"Scripts\Migrations\001_migration1.sql")
+                .InfoLine(@"Scripts\Migrations\002_migration2.sql")
+                .InfoLine(@"Scripts\01_DataLoads\01_Phase1\001_referencedata1.sql")
+                .InfoLine(@"Scripts\01_DataLoads\01_Phase1\002_samples.sql")
+                .InfoLine(@"Scripts\01_DataLoads\02_Phase2\002_referencedata2.sql")
+                .InfoLine(@"Scripts\02_ViewsAndSprocs\001_views.sql")
+                .InfoLine(@"Scripts\02_ViewsAndSprocs\002_sprocs.sql");
         }
     }
 }

@@ -24,7 +24,7 @@ namespace DbMigrations.IntegrationTests
                 $@"--providerName={providerName}"
             };
 
-            return new On(server, database, @".\Scripts\SQLite", providerName, masterConnectionString, connectionString, initSqlStatement, args);
+            return new On("SqLite", server, database, @".\Scripts\SQLite", providerName, masterConnectionString, connectionString, initSqlStatement, args);
 
         }
 
@@ -49,7 +49,7 @@ namespace DbMigrations.IntegrationTests
                 $@"--database={database}"
             };
 
-            return new On(server, database, @".\Scripts\SqlServer", "System.Data.SqlClient", masterConnectionString, connectionString, initSqlStatement, args);
+            return new On("SqlServer", server, database, @".\Scripts\SqlServer", "System.Data.SqlClient", masterConnectionString, connectionString, initSqlStatement, args);
         }
 
         public static On Oracle()
@@ -81,18 +81,18 @@ namespace DbMigrations.IntegrationTests
             var connectionString = $@"Data Source={server};User Id={database};Password=pass";
             var args = new[]
             {
-                $@"--directory={@".\Scripts\Oracle"}",
                 $@"--server={server}",
                 $@"--user={database}",
                 @"--password=pass",
                 @"--providerName=Oracle.ManagedDataAccess.Client"
             };
-            return new On(server, database, @".\Scripts\Oracle", "Oracle.ManagedDataAccess.Client", masterConnectionString, connectionString, initSqlStatement, args);
+            return new On("Oracle", server, database, @".\Scripts\Oracle", "Oracle.ManagedDataAccess.Client", masterConnectionString, connectionString, initSqlStatement, args);
         }
 
 
-        private On(string server, string database, string migrationFolder, string providerName, string masterConnectionString, string connectionString, string initSql, string[] args)
+        private On(string name, string server, string database, string migrationFolder, string providerName, string masterConnectionString, string connectionString, string initSql, string[] args)
         {
+            Name = name;
             Server = server;
             Database = database;
             MigrationFolder = migrationFolder;
@@ -118,5 +118,6 @@ namespace DbMigrations.IntegrationTests
         public string[] Arguments { get; }
 
         public string DropRecreate { get; }
+        public string Name { get;  }
     }
 }

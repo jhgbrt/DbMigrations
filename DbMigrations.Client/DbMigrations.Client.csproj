@@ -54,14 +54,16 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Application\IMigrationManager.cs" />
+    <Compile Include="Resources\Database.cs" />
     <Compile Include="Infrastructure\Db.cs" />
     <Compile Include="Infrastructure\DiffMatchPatch.cs" />
     <Compile Include="Infrastructure\EnumerableExtensions.cs" />
     <Compile Include="Infrastructure\Logger.cs" />
     <Compile Include="Model\Migration.cs" />
     <Compile Include="Application\MigrationManager.cs" />
-    <Compile Include="Resources\Database.cs" />
+    <Compile Include="Application\DatabaseFactory.cs" />
     <Compile Include="Resources\IDatabase.cs" />
+    <Compile Include="Resources\IMigrationRepository.cs" />
     <Compile Include="Resources\IScriptFileRepository.cs" />
     <Compile Include="Model\MigrationScript.cs" />
     <Compile Include="Infrastructure\Options.cs" />
@@ -69,11 +71,13 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Model\Script.cs" />
-    <Compile Include="Resources\OracleDatabase.cs" />
+    <Compile Include="Resources\MigrationRepository.cs" />
+    <Compile Include="Databases\Oracle\OracleDb.cs" />
     <Compile Include="Resources\ScriptFileRepository.cs" />
-    <Compile Include="Resources\SqlDatabase.cs" />
+    <Compile Include="Resources\ScriptKind.cs" />
+    <Compile Include="Databases\SqlServer\SqlServerDb.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
-    <Compile Include="Resources\SQLiteDatabase.cs" />
+    <Compile Include="Databases\SqLite\SqlLiteDb.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

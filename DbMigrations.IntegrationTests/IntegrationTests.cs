@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Data.Common;
 using System.IO;
 using System.Linq;
@@ -44,8 +45,9 @@ namespace DbMigrations.IntegrationTests
             var connectionString = target.ConnectionString;
             var masterConnectionString = target.MasterConnectionString;
             var providerName = target.ProviderName;
-            var args = target.Arguments;
+           var args = target.Arguments.Concat(new[] {$"--directory={migrations}"} ).ToArray();
 
+            Console.WriteLine("CONNECTING");
             using (var db = new Db(masterConnectionString, providerName))
             {
                 try
@@ -58,11 +60,13 @@ namespace DbMigrations.IntegrationTests
                 }
             }
 
+            Console.WriteLine("==== DROP - RECREATE ====");
             using (var db = new Db(masterConnectionString, providerName))
             {
                 db.Execute(target.DropRecreate);
             }
 
+            Console.WriteLine("==== EXECUTE MIGRATIONS ====");
             var result = Program.Main(args);
 
             Assert.AreEqual(0, result);
@@ -78,6 +82,8 @@ namespace DbMigrations.IntegrationTests
 
             File.WriteAllText($@"{migrations}\Migrations\003.sql", "CREATE TABLE Orders (Id int not null, Description char(20) not null)");
 
+            Console.WriteLine("==== ADDED MIGRATION, EXECUTE MIGRATIONS ====");
+
             result = Program.Main(args);
 
             Assert.AreEqual(0, result);
@@ -85,11 +91,19 @@ namespace DbMigrations.IntegrationTests
             File.WriteAllText($@"{migrations}\Migrations\003.sql", "--MODIFIED\r\n" +
                                                                    "CREATE TABLE Orders (Id int not null, Description char(15) not null)");
 
+            Console.WriteLine("==== MODIFIED MIGRATION, EXECUTE MIGRATIONS ====");
+
             result = Program.Main(args);
 
             Assert.AreEqual(1, result);
 
+            Console.WriteLine("==== REINITIALIZE MIGRATIONS ====");
 
+            args = args.Concat(new[] {"--reinitialize", "--force"}).ToArray();
+
+            result = Program.Main(args);
+
+            Assert.AreEqual(0, result);
         }
     }
 
