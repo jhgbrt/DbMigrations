@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using DbMigrations.Client.Infrastructure;
 using DbMigrations.Client.Model;
 
 namespace DbMigrations.Client.Resources
@@ -11,8 +9,8 @@ namespace DbMigrations.Client.Resources
         void EnsureMigrationsTable();
         void ClearAll();
 
-        IList<Migration> Select();
+        IList<Migration> GetMigrations();
         void Insert(Migration item);
-        bool TableExists { get; }
+        void ApplyMigration(Migration migration);
     }
 }

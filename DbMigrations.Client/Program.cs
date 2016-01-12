@@ -93,10 +93,9 @@ namespace DbMigrations.Client
         private static IMigrationManager CreateMigrationManager(Config config, IDb db)
         {
             var database = DatabaseFactory.FromConfig(db, config);
-            var repository = new MigrationRepository(database);
             var folder = new DirectoryInfo(config.Directory);
             var scripts = new ScriptFileRepository(folder);
-            var manager = new MigrationManager(scripts, repository, database, Logger);
+            var manager = new MigrationManager(scripts, database, Logger);
             return manager;
         }
 

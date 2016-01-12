@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMigrations.Client", "DbMigrations.Client\DbMigrations.Client.csproj", "{7440B88D-F756-4468-AA40-24B47A5AC4F1}"
 EndProject
@@ -10,6 +10,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DbMigrations.IntegrationTests", "DbMigrations.IntegrationTests\DbMigrations.IntegrationTests.csproj", "{6C17119B-1FA7-4CCF-8764-8355964D512B}"
 EndProject
 Project("{F5034706-568F-408A-B7B3-4D38C6DB8A32}") = "DbMigrations.EFMigrationHelper", "DbMigrations.EFMigrationHelper\DbMigrations.EFMigrationHelper.pssproj", "{6CAFC0C6-A428-4D30-A9F9-700E829FEA51}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8B95C27D-C605-4EAD-9FA1-870947C5C5FD}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

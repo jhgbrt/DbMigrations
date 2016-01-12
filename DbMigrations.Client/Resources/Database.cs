@@ -6,33 +6,51 @@ using DbMigrations.Client.Model;
 
 namespace DbMigrations.Client.Resources
 {
-    internal abstract class Database : IDatabase
+    internal class Database : IDatabase
     {
-        protected readonly IDb Db;
-        protected Database(IDb db, string esc, string tableName)
+        private readonly IDb _db;
+        private readonly Queries _queries;
+
+        public Database(IDb db, Queries queries)
         {
-            Esc = esc;
-            TableName = tableName;
-            Db = db;
+            TableName = queries.TableName;
+            Schema = queries.Schema;
+            _queries = queries;
+            _db = db;
         }
 
-        private string Esc { get; }
-        protected abstract bool MigrationsTableExists();
-        protected abstract void CreateMigrationsTable();
-
-        protected virtual void InitializeTransaction()
+        private bool MigrationsTableExists()
         {
+            return _db
+                .Sql(_queries.CountMigrationTablesStatement)
+                .WithParameters(new
+                {
+                    TableName = TableName.Split('.').Last(),
+                    Schema
+                }).AsScalar<int>() > 0;
         }
 
-        protected abstract string[] GetDropAllObjectsStatements();
-        protected string TableName { get; }
+
+        private void InitializeTransaction()
+        {
+            if (!string.IsNullOrEmpty(_queries?.ConfigureTransactionStatement))
+                _db.Sql(_queries.ConfigureTransactionStatement).AsNonQuery();
+        }
+
+        private string[] GetDropAllObjectsStatements()
+        {
+            return _db.Sql(_queries.DropAllObjectsStatement).Select(d => (string) d.Statement).ToArray();
+        }
+
+        private string TableName { get; }
+        private string Schema { get; }
 
         public void RunInTransaction(string script)
         {
             using (var scope = new TransactionScope())
             {
                 InitializeTransaction();
-                Db.Sql(script).AsNonQuery();
+                _db.Sql(script).AsNonQuery();
                 scope.Complete();
             }
         }
@@ -41,7 +59,7 @@ namespace DbMigrations.Client.Resources
         {
             if (TableExists) return;
 
-            CreateMigrationsTable();
+            _db.Sql(_queries.CreateTableStatement).AsNonQuery();
         }
 
         public bool TableExists => MigrationsTableExists();
@@ -51,27 +69,30 @@ namespace DbMigrations.Client.Resources
             var statements = GetDropAllObjectsStatements();
             foreach (var statement in statements)
             {
-                Db.Execute(statement);
+                _db.Execute(statement);
             }
         }
 
-        private string SelectMigration =>
-            $"SELECT ScriptName, MD5, ExecutedOn, Content " +
-            $"FROM {TableName} " +
-            $"ORDER BY ScriptName ASC";
+        private string SelectMigration => _queries.SelectStatement;
 
-        public IList<Migration> Select()
+        public IList<Migration> GetMigrations()
         {
-            return Db.Sql(SelectMigration).Select(d => new Migration(d.ScriptName, d.MD5, d.ExecutedOn, d.Content)).ToList();
+            if (!TableExists)
+                return new List<Migration>();
+            return _db.Sql(SelectMigration).Select(d => new Migration(d.ScriptName, d.MD5, d.ExecutedOn, d.Content)).ToList();
         }
 
-        private string InsertMigration =>
-            $"INSERT INTO {TableName} (ScriptName, MD5, ExecutedOn, Content) " +
-            $"VALUES ({Esc}ScriptName, {Esc}MD5, {Esc}ExecutedOn, {Esc}Content)";
+        private string InsertMigration => _queries.InsertStatement;
 
         public void Insert(Migration item)
         {
-            Db.Sql(InsertMigration).WithParameters(item).AsNonQuery();
+            _db.Sql(InsertMigration).WithParameters(item).AsNonQuery();
+        }
+
+        public void ApplyMigration(Migration migration)
+        {
+            RunInTransaction(migration.Content);
+            Insert(migration);
         }
     }
 }

@@ -52,17 +52,14 @@ namespace DbMigrations.Client.Application
     {
         private Logger Logger { get; }
         private readonly IScriptFileRepository _scriptFileRepository;
-        private readonly IMigrationRepository _migrationRepository;
         private readonly IDatabase _database;
 
         public MigrationManager(
             IScriptFileRepository scriptFileRepository, 
-            IMigrationRepository migrationRepository,
             IDatabase database, 
             Logger logger)
         {
             _scriptFileRepository = scriptFileRepository;
-            _migrationRepository = migrationRepository;
             _database = database;
             Logger = logger;
         }
@@ -125,7 +122,7 @@ namespace DbMigrations.Client.Application
        
         private List<MigrationScript> GetMigrations()
         {
-            var migrations = _migrationRepository.GetMigrations();
+            var migrations = _database.GetMigrations();
 
             var scripts = _scriptFileRepository.GetScripts(ScriptKind.Migration);
 
@@ -173,7 +170,7 @@ namespace DbMigrations.Client.Application
                     {
                         try
                         {
-                            _migrationRepository.ApplyMigration(new Migration(script.ScriptName, script.Checksum, DateTime.UtcNow, script.Content));
+                            _database.ApplyMigration(new Migration(script.ScriptName, script.Checksum, DateTime.UtcNow, script.Content));
                             Logger.Ok();
                         }
                         catch (Exception e)

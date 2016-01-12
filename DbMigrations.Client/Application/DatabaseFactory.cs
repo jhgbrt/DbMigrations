@@ -1,7 +1,3 @@
-using DbMigrations.Client.Databases;
-using DbMigrations.Client.Databases.Oracle;
-using DbMigrations.Client.Databases.SqlServer;
-using DbMigrations.Client.Databases.SqLite;
 using DbMigrations.Client.Infrastructure;
 using DbMigrations.Client.Resources;
 
@@ -13,13 +9,13 @@ namespace DbMigrations.Client.Application
         {
             if (config.ProviderName.StartsWith("Oracle"))
             {
-                return new OracleDb(db, config);
+                return new Database(db, Queries.Oracle.Instance(config));
             }
-            if (config.ProviderName.Contains("SQLite"))
+            if (config.ProviderName.Contains("SqLite"))
             {
-                return new SqlLiteDb(db, config);
+                return new Database(db, Queries.SqLite.Instance());
             }
-            return new SqlServerDb(db, config);
+            return new Database(db, Queries.SqlServer.Instance(config));
         }
     }
 }

@@ -7,7 +7,7 @@ namespace DbMigrations.Client.Infrastructure
     public class Logger
     {
         private static readonly object Lock = new object();
-        public Logger InfoLine(string message) => Info(message).Line();
+        public Logger InfoLine(string message) => Info(message + "\r\n");
         public Logger Info(string message) => Write(ForegroundColor, message);
         public Logger WarnLine(string message) => Warn(message).Line();
         public Logger Warn(string message) => Write(DarkYellow, message);

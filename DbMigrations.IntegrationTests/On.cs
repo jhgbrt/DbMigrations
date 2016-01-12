@@ -11,7 +11,7 @@ namespace DbMigrations.IntegrationTests
             Console.WriteLine(sqliteAssembly.ToString());
             var initSqlStatement = ""; // a database is always created from scratch (since mstest always executes in a new folder)
 
-            var providerName = "System.Data.SQLite";
+            var providerName = "System.Data.SqLite";
             var server = @"db.db";
             var database = "MIGRATIONTEST";
             var masterConnectionString = $@"Data Source={server};";

@@ -1,6 +1,9 @@
 using System;
+using System.Configuration;
+using System.Data;
 using System.Data.Common;
 using System.IO;
+using System.Linq;
 using System.Text;
 using DbMigrations.Client.Infrastructure;
 
@@ -58,11 +61,18 @@ namespace DbMigrations.Client
                     "help", "Print help", s => Help = true
                 },
                 {
+                    "connectionString=", "The complete connection string", s => ConnectionString = s
+                },
+                {
                     "providerName=", "The database provider invariant name. The default is " +
-                                     "System.Data.SqlClient). For other provider names, the " +
-                                     "corresponding .dll containing the provider implementation " +
+                                     "System.Data.SqlClient. For other provider names, the " +
+                                     "corresponding dependencies (dll and possibly interop code) " +
+                                     "containing the provider implementation " +
                                      "must be deployed alongside the migration utility " +
-                                     "(e.g., for Oracle: Oracle.ManagedDataAccess.Client.dll).", s => ProviderName = s
+                                     "(e.g., for Oracle, make sure that Oracle.ManagedDataAccess.Client.dll " +
+                                     "is present alongside the .exe or somewhere in the path). " +
+                                     "At the moment, apart from System.Data.SqlClient (for SQL Server), the following providers are supported: \r\n" + 
+                                     string.Join(Environment.NewLine, SupportedDataProviders.Names.Select(n => " - " + n)), s => ProviderName = s
                 },
                 {
                     "schema=", "Db schema for Migrations table (if different from the default for this user)", s => Schema = s
@@ -126,8 +136,10 @@ namespace DbMigrations.Client
 
             result._optionSet.Parse(args);
 
-            if (string.IsNullOrEmpty(result.ProviderName)) 
+            if (string.IsNullOrEmpty(result.ProviderName))
                 result.ProviderName = "System.Data.SqlClient";
+            else
+                EnsureProviderConfigurations();
 
             if (!string.IsNullOrEmpty(result.ConnectionString))
                 return result;
@@ -180,6 +192,62 @@ namespace DbMigrations.Client
         public string UserName
         {
             get { return _user; }
+        }
+
+        private static void EnsureProviderConfigurations()
+        {
+
+            //var providerType = (
+            //    from dll in System.IO.Directory.EnumerateFiles(".\\", "*.dll")
+            //    let assembly = Assembly.LoadFile(Path.GetFullPath(dll))
+            //    from type in assembly.GetTypes()
+            //    where typeof(DbProviderFactory).IsAssignableFrom(type)
+            //    select type
+            //    ).FirstOrDefault();
+
+            //if (providerType == null)
+            //{
+            //    new Logger().WarnLine("Provider " + providerName + " could not be loaded");
+            //    return;
+            //}
+
+            var dataSet = (DataSet)ConfigurationManager.GetSection("system.data");
+
+            var dataproviders = SupportedDataProviders.DataProviders;
+
+            var dataTable = dataSet.Tables[0];
+            var dynamicRows = dataTable.Rows.OfType<DataRow>().Select(row => Dynamic.DataRow(row));
+
+            var itemsToAdd = from item in dataproviders
+                             join row in dynamicRows on item.InvariantName equals row.InvariantName into rows
+                             where !rows.Any()
+                             select item;
+
+            foreach (var item in itemsToAdd)
+            {
+                dataTable.Rows.Add(item.Name, item.Description, item.InvariantName, item.AssemblyQualifiedName);
+            }
+        }
+    }
+
+    class DataProvider
+    {
+        public string Name;
+        public string Description;
+        public string InvariantName;
+        public string AssemblyQualifiedName;
+    }
+    static class SupportedDataProviders
+    {
+        public static readonly DataProvider[] DataProviders =
+            {
+                new DataProvider {Name = "SQLite Data Provider" , Description = ".Net Framework Data Provider for SQLite", InvariantName = "System.Data.SQLite", AssemblyQualifiedName = "System.Data.SQLite.SQLiteFactory, System.Data.SQLite"},
+                new DataProvider {Name = "ODP.NET, Managed Driver", Description = "Oracle Data Provider for .NET, Managed Driver", InvariantName = "Oracle.ManagedDataAccess.Client", AssemblyQualifiedName = "Oracle.ManagedDataAccess.Client.OracleClientFactory, Oracle.ManagedDataAccess"},
+            };
+
+        public static string[] Names
+        {
+            get { return DataProviders.Select(d => $"{d.InvariantName} ({d.Description})").ToArray(); }
         }
     }
 }
