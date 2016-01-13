@@ -13,12 +13,12 @@ namespace DbMigrations.Client.Resources
                     CountMigrationTablesStatement, 
                     DropAllObjectsStatement);
             }
-            private static string CountMigrationTablesStatement => "SELECT COUNT(*) " +
+            private static string CountMigrationTablesStatement = "SELECT COUNT(*) " +
                                                                    "FROM INFORMATION_SCHEMA.TABLES " +
                                                                    "WHERE TABLE_NAME = @TableName AND TABLE_SCHEMA = @Schema";
 
 
-            private static string CreateTableTemplate => "CREATE TABLE {0} (" +
+            private static string CreateTableTemplate = "CREATE TABLE {0} (" +
                                                          "      ScriptName nvarchar(255) NOT NULL, " +
                                                          "      MD5 nvarchar(32) NOT NULL, " +
                                                          "      ExecutedOn datetime NOT NULL," +
@@ -26,7 +26,7 @@ namespace DbMigrations.Client.Resources
                                                          "      CONSTRAINT PK_Migrations PRIMARY KEY CLUSTERED (ScriptName ASC)" +
                                                          "  )";
 
-            private static string DropAllObjectsStatement => "-- procedures\r\n" +
+            private static string DropAllObjectsStatement = "-- procedures\r\n" +
                                                              "Select \'drop procedure [\' + schema_name(schema_id) + \'].[\' + name + \']\' [Statement]\r\n" +
                                                              "from sys.procedures\r\n" +
                                                              "union all\r\n" +
@@ -65,7 +65,7 @@ namespace DbMigrations.Client.Resources
                 return new Queries(":", tableName, schema, string.Empty, CreateTableTemplate,
                     CountMigrationTablesStatement, DropAllObjectsStatement);
             }
-            static string CountMigrationTablesStatement => "SELECT COUNT(*) " +
+            static string CountMigrationTablesStatement = "SELECT COUNT(*) " +
                                                            "FROM ALL_TABLES " +
                                                            "WHERE UPPER(TABLE_NAME) = :TableName and OWNER = :Schema";
 
@@ -96,18 +96,18 @@ namespace DbMigrations.Client.Resources
                     , DropAllObjectsStatement);
             }
 
-            private static string CountMigrationTablesStatement => "SELECT COUNT(*) " +
+            private static string CountMigrationTablesStatement = "SELECT COUNT(*) " +
                                                                    "FROM sqlite_master " +
                                                                    "WHERE type = 'table' AND name = @TableName";
 
-            private static string CreateTableTemplate => "CREATE TABLE IF NOT EXISTS {0} (" +
+            private static string CreateTableTemplate = "CREATE TABLE IF NOT EXISTS {0} (" +
                                                          "      ScriptName nvarchar NOT NULL PRIMARY KEY, " +
                                                          "      MD5 nvarchar NOT NULL, " +
                                                          "      ExecutedOn datetime NOT NULL," +
                                                          "      Content nvarchar NOT NULL" +
                                                          "  )";
 
-            private static string DropAllObjectsStatement => "select 'drop table ' || name || ';' as \"Statement\" from sqlite_master where type = 'table';";
+            private static string DropAllObjectsStatement = "select 'drop table ' || name || ';' as \"Statement\" from sqlite_master where type = 'table';";
         }
 
         public Queries(string escapeCharacter, string tableName, string schema, string configureTransactionStatement, string createTableTemplate, string countMigrationTablesStatement, string dropAllObjectsStatement)
