@@ -8,7 +8,7 @@ The tool is a command-line utility that you point at a folder containing
 sql scripts, which (by convention) need to be organized in a certain way.
 Here's a small example to get a feel of it:
 
-    migrate.exe --directory=path/to/scripts --server=.\sqlexpress 
+    migrate.exe --directory=path/to/scripts --server=.\sqlexpress --database=MyDb
 
 This command runs all migration scripts in the folder pointed to against a
 SQL Express database, using integrated security. 
