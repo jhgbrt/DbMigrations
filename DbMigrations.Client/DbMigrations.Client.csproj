@@ -53,6 +53,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Application\IMigrationManager.cs" />
+    <Compile Include="Configuration\DbMigrationsConfiguration.cs" />
     <Compile Include="Resources\Database.cs" />
     <Compile Include="Infrastructure\Db.cs" />
     <Compile Include="Infrastructure\DiffMatchPatch.cs" />

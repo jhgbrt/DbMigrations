@@ -47,6 +47,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
   </ItemGroup>
   <Choose>
@@ -62,6 +63,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Configuration\DbMigrationConfigurationSectionTests.cs" />
     <Compile Include="MigrationManagerTests.cs" />
     <Compile Include="MigrationScriptTests.cs" />
     <Compile Include="ScriptFileRepositoryTests.cs" />
@@ -77,6 +79,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
