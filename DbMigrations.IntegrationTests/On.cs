@@ -38,7 +38,7 @@ namespace DbMigrations.IntegrationTests
                                    "end\r\n" +
                                    "create database {0}\r\n";
 
-            var server = @"localhost\sqlexpress";
+            var server = @"localhost";
             var database = "MIGRATIONTEST";
             var masterConnectionString = $@"Data Source={server};Initial Catalog=master;Integrated Security=True";
             string connectionString = $@"Data Source={server};Initial Catalog={database};Integrated Security=True";

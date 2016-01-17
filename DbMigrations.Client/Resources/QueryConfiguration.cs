@@ -1,70 +1,51 @@
 using System.Configuration;
-using System.Runtime.InteropServices;
 using DbMigrations.Client.Configuration;
 
 namespace DbMigrations.Client.Resources
 {
-    class Queries
+    class QueryConfiguration
     {
-
-        public DbMigrationsConfiguration ToConfiguration()
+        public static QueryConfiguration GetQueryConfiguration(Config config)
         {
-            var result = new DbMigrationsConfiguration
+            var c = (DbMigrationsConfiguration)ConfigurationManager.GetSection("migrationConfig");
+            if (!string.IsNullOrEmpty(c?.InvariantName))
+                return FromConfigurationSection(c);
+
+            if (config.ProviderName.StartsWith("Oracle"))
             {
-                TableName = TableName,
-                Schema = Schema,
-                InvariantName = InvariantName,
-                EscapeChar = EscapeCharacter,
-                CountMigrationTables = new QueryConfiguration
-                {
-                    Sql = new ConfigurationTextElement(CountMigrationTablesStatement),
-                    Parameters = new NameValueConfigurationCollection
-                    {
-                        new NameValueConfigurationElement("TableName", null),
-                        new NameValueConfigurationElement("Schema", null)
-                    }
-                },
-                ConfigureTransaction =
-                {
-                    Sql = new ConfigurationTextElement(ConfigureTransactionStatement)
-                },
-                CreateMigrationTable =
-                {
-                    Sql = new ConfigurationTextElement(CreateTableTemplate),
-                    Arguments = new NameValueConfigurationCollection
-                    {
-                        new NameValueConfigurationElement("TableName", null)
-                    }
-                },
-                DropAllObjects =
-                {
-                    Sql = new ConfigurationTextElement(DropAllObjectsStatement)
-                }
-            };
-            return result;
+                return Oracle.Instance(config);
+            }
+            if (config.ProviderName.Contains("SqLite"))
+            {
+                return SqLite.Instance();
+            }
+
+            return SqlServer.Instance(config);
+        }
+
+        public static QueryConfiguration FromConfigurationSection(DbMigrationsConfiguration config)
+        {
+            if (string.IsNullOrEmpty(config?.InvariantName))
+                return null;
+
+            return new QueryConfiguration(
+                config.InvariantName,
+                config.EscapeChar,
+                config.TableName,
+                config.Schema,
+                config.ToQuery(config.ConfigureTransaction),
+                config.ToQuery(config.CreateMigrationTable),
+                config.ToQuery(config.CountMigrationTables),
+                config.ToQuery(config.DropAllObjects)
+                );
         }
 
         public static class SqlServer
         {
-            public static Queries FromConfigurationSection(DbMigrationsConfiguration config)
-            {
-                return new Queries(
-                    config.InvariantName,
-                    config.EscapeChar, 
-                    config.TableName, 
-                    config.Schema,
-                    config.ToQuery(config.ConfigureTransaction), 
-                    config.ToQuery(config.CreateMigrationTable),
-                    config.ToQuery(config.CountMigrationTables),
-                    config.ToQuery(config.DropAllObjects)
-                    );
-            }
-
-
-            public static Queries Instance(Config config)
+            public static QueryConfiguration Instance(Config config)
             {
                 var schema = config.Schema ?? "dbo";
-                return new Queries("System.Data.SqlClient", "@", $"{schema}.Migrations", schema, 
+                return new QueryConfiguration("System.Data.SqlClient", "@", $"{schema}.Migrations", schema, 
                     "SET XACT_ABORT ON", 
                     CreateTableTemplate,
                     CountMigrationTablesStatement, 
@@ -115,11 +96,11 @@ namespace DbMigrations.Client.Resources
         }
         public static class Oracle
         {
-            public static Queries Instance(Config config)
+            public static QueryConfiguration Instance(Config config)
             {
                 var schema = config.Schema ?? config.UserName;
                 var tableName = $"{schema}.MIGRATIONS";
-                return new Queries("Oracle.ManagedDataAccess.Client", ":", tableName, schema, string.Empty, CreateTableTemplate,
+                return new QueryConfiguration("Oracle.ManagedDataAccess.Client", ":", tableName, schema, string.Empty, CreateTableTemplate,
                     CountMigrationTablesStatement, DropAllObjectsStatement);
             }
             static string CountMigrationTablesStatement = "SELECT COUNT(*) " +
@@ -145,9 +126,9 @@ namespace DbMigrations.Client.Resources
 
         public static class SqLite
         {
-            public static Queries Instance()
+            public static QueryConfiguration Instance()
             {
-                return new Queries(
+                return new QueryConfiguration(
                     "System.Data.SqLite",
                     "@", "Migrations", string.Empty, string.Empty
                     , CreateTableTemplate
@@ -169,7 +150,7 @@ namespace DbMigrations.Client.Resources
             private static string DropAllObjectsStatement = "select 'drop table ' || name || ';' as \"Statement\" from sqlite_master where type = 'table';";
         }
 
-        public Queries(string invariantName, string escapeCharacter, string tableName, string schema, string configureTransactionStatement, string createTableTemplate, string countMigrationTablesStatement, string dropAllObjectsStatement)
+        public QueryConfiguration(string invariantName, string escapeCharacter, string tableName, string schema, string configureTransactionStatement, string createTableTemplate, string countMigrationTablesStatement, string dropAllObjectsStatement)
         {
             InvariantName = invariantName;
             EscapeCharacter = escapeCharacter;
@@ -209,7 +190,12 @@ namespace DbMigrations.Client.Resources
             config.TableName = TableName;
             config.Schema = Schema;
             config.EscapeChar = EscapeCharacter;
-            config.CountMigrationTables.Sql = new ConfigurationTextElement(CountMigrationTablesStatement);
+            config.CountMigrationTables.Sql = CountMigrationTablesStatement;
+            config.CountMigrationTables.Parameters = new[] {"TableName", "Schema"};
+            config.DropAllObjects.Sql = DropAllObjectsStatement;
+            config.ConfigureTransaction.Sql = ConfigureTransactionStatement;
+            config.CreateMigrationTable.Sql = CreateTableTemplate;
+            config.CreateMigrationTable.Arguments = new [] { "TableName"};
         }
     }
 }

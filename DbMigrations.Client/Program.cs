@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Configuration;
 using System.IO;
 using System.Text;
 using DbMigrations.Client.Application;
+using DbMigrations.Client.Configuration;
 using DbMigrations.Client.Infrastructure;
 using DbMigrations.Client.Resources;
+using QueryConfiguration = DbMigrations.Client.Resources.QueryConfiguration;
 
 namespace DbMigrations.Client
 {
@@ -30,9 +33,24 @@ namespace DbMigrations.Client
                 return 1;
             }
 
+            var queryConfiguration = QueryConfiguration.GetQueryConfiguration(config);
+            var c = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            var m = (DbMigrationsConfiguration)c.GetSection("migrationConfig");
+            if (m == null)
+            {
+                m = new DbMigrationsConfiguration();
+                c.Sections.Add("migrationConfig", m);
+            }
+            if (queryConfiguration != null && config.PersistConfiguration)
+            {
+                queryConfiguration.SaveToConfig(m);
+                c.Save(ConfigurationSaveMode.Minimal);
+                return 0;
+            }
+
             using (var db = new Db(config.ConnectionString, config.ProviderName))
             {
-                var manager = CreateMigrationManager(config, db);
+                var manager = CreateMigrationManager(config, db, queryConfiguration);
                 try
                 {
 
@@ -51,7 +69,7 @@ namespace DbMigrations.Client
 
                     Logger.Info("Connecting to the database... ");
                     db.Connect();
-                    
+
                     Logger
                         .OkLine()
                         .Line()
@@ -90,9 +108,9 @@ namespace DbMigrations.Client
             }
         }
 
-        private static IMigrationManager CreateMigrationManager(Config config, IDb db)
+        private static IMigrationManager CreateMigrationManager(Config config, IDb db, QueryConfiguration queryConfig)
         {
-            var database = DatabaseFactory.FromConfig(db, config);
+            var database = new Database(db, queryConfig);
             var folder = new DirectoryInfo(config.Directory);
             var scripts = new ScriptFileRepository(folder);
             var manager = new MigrationManager(scripts, database, Logger);

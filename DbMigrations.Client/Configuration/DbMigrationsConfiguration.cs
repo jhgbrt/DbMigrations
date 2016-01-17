@@ -1,44 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
+﻿using System.Configuration;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml;
-using DbMigrations.Client.Infrastructure;
 
 namespace DbMigrations.Client.Configuration
 {
-    public class ConfigurationTextElement : ConfigurationElement
-    {
-        private string _value;
-        protected override void DeserializeElement(XmlReader reader,
-                                bool serializeCollectionKey)
-        {
-            _value = reader.ReadElementContentAs(typeof(string), null) as string;
-        }
-
-        public ConfigurationTextElement()
-        {
-            
-        }
-
-        public ConfigurationTextElement(string value)
-        {
-            _value = value;
-        }
-
-        public string Value
-        {
-            get { return _value; }
-        }
-
-        protected override bool SerializeElement(XmlWriter writer, bool serializeCollectionKey)
-        {
-            writer.WriteCData(_value);
-        }
-    }
-
     public class DbMigrationsConfiguration : ConfigurationSection
     {
         const string invariantName = "invariantName";
@@ -107,10 +72,10 @@ namespace DbMigrations.Client.Configuration
 
         public string ToQuery(QueryConfiguration q)
         {
-            var template = q.Sql.Value;
-
+            var template = q.Sql ?? string.Empty;
+            if (!q.Arguments.Any()) return template;
             var args = (
-                from a in q.Arguments.AllKeys
+                from a in q.Arguments
                 let p = GetType().GetProperty(a)
                 select p.GetValue(this)
                 ).ToArray();
@@ -121,28 +86,97 @@ namespace DbMigrations.Client.Configuration
 
     public class QueryConfiguration : ConfigurationElement
     {
+        public QueryConfiguration()
+        {
+            Arguments = new string[0];
+        }
+
         const string sql = "sql";
         [ConfigurationProperty(sql)]
-        public ConfigurationTextElement Sql
+        public string Sql
         {
-            get { return this[sql] as ConfigurationTextElement; }
+            get { return this[sql] as string; }
             set { this[sql] = value; }
         }
 
         const string parameters = "parameters";
         [ConfigurationProperty(parameters)]
-        public NameValueConfigurationCollection Parameters
+        public string ParametersStr
         {
-            get { return this[parameters] as NameValueConfigurationCollection; }
+            get { return this[parameters] as string; }
             set { this[parameters] = value; }
         }
-        const string arguments = "arguments";
-        [ConfigurationProperty(arguments)]
-        public NameValueConfigurationCollection Arguments
+
+        public string[] Parameters
         {
-            get { return this[arguments] as NameValueConfigurationCollection; }
-            set { this[arguments] = value; }
+            get
+            {
+                return string.IsNullOrEmpty(ParametersStr) ? new string[] { } : ParametersStr.Split(',');
+            }
+            set
+            {
+                ParametersStr = value == null ? null : string.Join(",", value);
+            }
         }
 
+        const string arguments = "arguments";
+
+        [ConfigurationProperty(arguments)]
+        public string ArgumentsStr
+        {
+            get { return this[arguments] as string; }
+            set { this[arguments] = value; }
+
+        }
+        public string[] Arguments
+        {
+            get
+            {
+                return string.IsNullOrEmpty(ArgumentsStr) ? new string[] { } : ArgumentsStr.Split(',');
+            }
+            set
+            {
+                ArgumentsStr = value == null ? null : string.Join(",", value);
+            }
+        }
+
+        protected override bool SerializeElement(XmlWriter writer, bool serializeCollectionKey)
+        {
+            return true;
+        }
+
+        protected override bool SerializeToXmlElement(XmlWriter writer, string elementName)
+        {
+            if (writer == null)
+                return true;
+            writer.WriteStartElement(elementName);
+            if (!string.IsNullOrEmpty(ArgumentsStr))
+                writer.WriteAttributeString(arguments, ArgumentsStr);
+            if (!string.IsNullOrEmpty(ParametersStr))
+                writer.WriteAttributeString(parameters, ParametersStr);
+            writer.WriteCData(Sql);
+            writer.WriteEndElement();
+            return false;
+        }
+
+        protected override void DeserializeElement(XmlReader reader, bool serializeCollectionKey)
+        {
+            var props = Properties;
+            if (reader.AttributeCount > 0)
+            {
+                while (reader.MoveToNextAttribute())
+                {
+                    string propertyName = reader.Name;
+                    string xmlValue = reader.Value;
+                    var prop = props[propertyName];
+                    var propertyValue = prop.Converter.ConvertFromInvariantString(xmlValue);
+                    base[propertyName] = propertyValue;
+                }
+            }
+            reader.MoveToContent();
+            var content = reader.ReadElementContentAs(typeof(string), null);
+            if (content != null)
+                Sql = (string)content;
+        }
     }
 }

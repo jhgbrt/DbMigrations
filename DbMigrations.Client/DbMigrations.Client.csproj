@@ -59,7 +59,6 @@
     <Compile Include="Infrastructure\Logger.cs" />
     <Compile Include="Model\Migration.cs" />
     <Compile Include="Application\MigrationManager.cs" />
-    <Compile Include="Application\DatabaseFactory.cs" />
     <Compile Include="Resources\IDatabase.cs" />
     <Compile Include="Resources\IScriptFileRepository.cs" />
     <Compile Include="Model\MigrationScript.cs" />
@@ -68,14 +67,13 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Model\Script.cs" />
-    <Compile Include="Resources\Queries.cs" />
+    <Compile Include="Resources\QueryConfiguration.cs" />
     <Compile Include="Resources\ScriptFileRepository.cs" />
     <Compile Include="Resources\ScriptKind.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

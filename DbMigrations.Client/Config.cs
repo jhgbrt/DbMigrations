@@ -82,6 +82,9 @@ namespace DbMigrations.Client
                 },
                 {
                     "force", "When used with --reinitialize, allows to restage a remote db. Use with care!", s => Force = true
+                },
+                {
+                    "persistConfiguration", "Persist the configuration to the config file", s => PersistConfiguration = true
                 }
             };
         }
@@ -99,6 +102,9 @@ namespace DbMigrations.Client
 
         public bool IsValid(StringBuilder errors)
         {
+            if (PersistConfiguration)
+                return true;
+
             if (string.IsNullOrEmpty(_directory))
                 errors.AppendLine("No folder");
             else if (!System.IO.Directory.Exists(_directory))
@@ -169,19 +175,21 @@ namespace DbMigrations.Client
         public bool Help { get; set; }
         public string Schema { get; private set; }
 
-        public DbProviderFactory DbProviderFactory
+        private DbProviderFactory DbProviderFactory
         {
             get { return DbProviderFactories.GetFactory(ProviderName); }
         }
 
         private DbConnectionStringBuilder _connectionStringBuilder;
-        public DbConnectionStringBuilder ConnectionStringBuilder
+
+        private DbConnectionStringBuilder ConnectionStringBuilder
         {
             get
             {
-                if (_connectionStringBuilder == null)
+                if (_connectionStringBuilder != null) return _connectionStringBuilder;
+                var connectionStringBuilder = DbProviderFactory.CreateConnectionStringBuilder();
+                if (connectionStringBuilder != null)
                 {
-                    var connectionStringBuilder = DbProviderFactory.CreateConnectionStringBuilder();
                     connectionStringBuilder.ConnectionString = ConnectionString;
                     _connectionStringBuilder = connectionStringBuilder;
                 }
@@ -194,23 +202,10 @@ namespace DbMigrations.Client
             get { return _user; }
         }
 
+        public bool PersistConfiguration { get; private set; }
+
         private static void EnsureProviderConfigurations()
         {
-
-            //var providerType = (
-            //    from dll in System.IO.Directory.EnumerateFiles(".\\", "*.dll")
-            //    let assembly = Assembly.LoadFile(Path.GetFullPath(dll))
-            //    from type in assembly.GetTypes()
-            //    where typeof(DbProviderFactory).IsAssignableFrom(type)
-            //    select type
-            //    ).FirstOrDefault();
-
-            //if (providerType == null)
-            //{
-            //    new Logger().WarnLine("Provider " + providerName + " could not be loaded");
-            //    return;
-            //}
-
             var dataSet = (DataSet)ConfigurationManager.GetSection("system.data");
 
             var dataproviders = SupportedDataProviders.DataProviders;

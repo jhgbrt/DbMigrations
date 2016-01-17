@@ -49,7 +49,7 @@ namespace DbMigrations.UnitTests.Configuration
         [TestMethod]
         public void CountMigrationTablesHasSql()
         {
-            Assert.AreEqual("SELECT *", config.CountMigrationTables.Sql.Value);
+            Assert.AreEqual("SELECT *", config.CountMigrationTables.Sql.Trim());
         }
 
         [TestMethod]
@@ -60,7 +60,7 @@ namespace DbMigrations.UnitTests.Configuration
         [TestMethod]
         public void SqlParameterHasElement()
         {
-            Assert.AreEqual("MyParameter", config.CountMigrationTables.Parameters.AllKeys[0]);
+            Assert.AreEqual("MyParameter1,MyParameter2", config.CountMigrationTables.Parameters);
         }
 
         [TestMethod]
@@ -71,7 +71,7 @@ namespace DbMigrations.UnitTests.Configuration
         [TestMethod]
         public void SqlArgumentHasElement()
         {
-            Assert.AreEqual("MyArgument", config.CountMigrationTables.Arguments.AllKeys[0]);
+            Assert.AreEqual("MyArg1,MyArg2", config.CountMigrationTables.Arguments);
         }
     }
 }

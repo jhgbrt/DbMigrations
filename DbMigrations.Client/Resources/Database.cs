@@ -9,20 +9,20 @@ namespace DbMigrations.Client.Resources
     internal class Database : IDatabase
     {
         private readonly IDb _db;
-        private readonly Queries _queries;
+        private readonly QueryConfiguration _queryConfiguration;
 
-        public Database(IDb db, Queries queries)
+        public Database(IDb db, QueryConfiguration queryConfiguration)
         {
-            TableName = queries.TableName;
-            Schema = queries.Schema;
-            _queries = queries;
+            TableName = queryConfiguration.TableName;
+            Schema = queryConfiguration.Schema;
+            _queryConfiguration = queryConfiguration;
             _db = db;
         }
 
         private bool MigrationsTableExists()
         {
             return _db
-                .Sql(_queries.CountMigrationTablesStatement)
+                .Sql(_queryConfiguration.CountMigrationTablesStatement)
                 .WithParameters(new
                 {
                     TableName = TableName.Split('.').Last(),
@@ -33,13 +33,13 @@ namespace DbMigrations.Client.Resources
 
         private void InitializeTransaction()
         {
-            if (!string.IsNullOrEmpty(_queries?.ConfigureTransactionStatement))
-                _db.Sql(_queries.ConfigureTransactionStatement).AsNonQuery();
+            if (!string.IsNullOrEmpty(_queryConfiguration?.ConfigureTransactionStatement))
+                _db.Sql(_queryConfiguration.ConfigureTransactionStatement).AsNonQuery();
         }
 
         private string[] GetDropAllObjectsStatements()
         {
-            return _db.Sql(_queries.DropAllObjectsStatement).Select(d => (string) d.Statement).ToArray();
+            return _db.Sql(_queryConfiguration.DropAllObjectsStatement).Select(d => (string) d.Statement).ToArray();
         }
 
         private string TableName { get; }
@@ -59,7 +59,7 @@ namespace DbMigrations.Client.Resources
         {
             if (TableExists) return;
 
-            _db.Sql(_queries.CreateTableStatement).AsNonQuery();
+            _db.Sql(_queryConfiguration.CreateTableStatement).AsNonQuery();
         }
 
         public bool TableExists => MigrationsTableExists();
@@ -73,7 +73,7 @@ namespace DbMigrations.Client.Resources
             }
         }
 
-        private string SelectMigration => _queries.SelectStatement;
+        private string SelectMigration => _queryConfiguration.SelectStatement;
 
         public IList<Migration> GetMigrations()
         {
@@ -82,7 +82,7 @@ namespace DbMigrations.Client.Resources
             return _db.Sql(SelectMigration).Select(d => new Migration(d.ScriptName, d.MD5, d.ExecutedOn, d.Content)).ToList();
         }
 
-        private string InsertMigration => _queries.InsertStatement;
+        private string InsertMigration => _queryConfiguration.InsertStatement;
 
         public void Insert(Migration item)
         {
