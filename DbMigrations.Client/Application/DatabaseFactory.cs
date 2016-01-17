@@ -1,3 +1,5 @@
+using System.Configuration;
+using DbMigrations.Client.Configuration;
 using DbMigrations.Client.Infrastructure;
 using DbMigrations.Client.Resources;
 
@@ -7,15 +9,24 @@ namespace DbMigrations.Client.Application
     {
         public static IDatabase FromConfig(IDb db, Config config)
         {
+            Queries q;
             if (config.ProviderName.StartsWith("Oracle"))
             {
-                return new Database(db, Queries.Oracle.Instance(config));
+                q = Queries.Oracle.Instance(config);
             }
-            if (config.ProviderName.Contains("SqLite"))
+            else if (config.ProviderName.Contains("SqLite"))
             {
-                return new Database(db, Queries.SqLite.Instance());
+                q = Queries.SqLite.Instance();
             }
-            return new Database(db, Queries.SqlServer.Instance(config));
+            else
+            {
+                q = Queries.SqlServer.Instance(config);
+            }
+            var c = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None); 
+            var m = (DbMigrationsConfiguration)c.GetSection("migrationConfig");
+            q.SaveToConfig(m);
+            c.Save();
+            return new Database(db, q);
         }
     }
 }

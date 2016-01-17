@@ -5,21 +5,37 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
+using DbMigrations.Client.Infrastructure;
 
 namespace DbMigrations.Client.Configuration
 {
-    public class ConfigurationTextElement<T> : ConfigurationElement
+    public class ConfigurationTextElement : ConfigurationElement
     {
-        private T _value;
+        private string _value;
         protected override void DeserializeElement(XmlReader reader,
                                 bool serializeCollectionKey)
         {
-            _value = (T)reader.ReadElementContentAs(typeof(T), null);
+            _value = reader.ReadElementContentAs(typeof(string), null) as string;
         }
 
-        public T Value
+        public ConfigurationTextElement()
+        {
+            
+        }
+
+        public ConfigurationTextElement(string value)
+        {
+            _value = value;
+        }
+
+        public string Value
         {
             get { return _value; }
+        }
+
+        protected override bool SerializeElement(XmlWriter writer, bool serializeCollectionKey)
+        {
+            writer.WriteCData(_value);
         }
     }
 
@@ -29,7 +45,7 @@ namespace DbMigrations.Client.Configuration
         [ConfigurationProperty(invariantName)]
         public string InvariantName
         {
-            get { return (string) this[invariantName]; }
+            get { return this[invariantName] as string; }
             set { this[invariantName] = value; }
         }
 
@@ -37,7 +53,7 @@ namespace DbMigrations.Client.Configuration
         [ConfigurationProperty(tableName)]
         public string TableName
         {
-            get { return (string)this[tableName]; }
+            get { return this[tableName] as string; }
             set { this[tableName] = value; }
         }
 
@@ -45,7 +61,7 @@ namespace DbMigrations.Client.Configuration
         [ConfigurationProperty(escapeChar, DefaultValue = "@")]
         public string EscapeChar
         {
-            get { return (string)this[escapeChar]; }
+            get { return this[escapeChar] as string; }
             set { this[escapeChar] = value; }
         }
 
@@ -53,7 +69,7 @@ namespace DbMigrations.Client.Configuration
         [ConfigurationProperty(schema)]
         public string Schema
         {
-            get { return (string)this[schema]; }
+            get { return this[schema] as string; }
             set { this[schema] = value; }
         }
 
@@ -61,7 +77,7 @@ namespace DbMigrations.Client.Configuration
         [ConfigurationProperty(countMigrationTables)]
         public QueryConfiguration CountMigrationTables
         {
-            get { return (QueryConfiguration) this[countMigrationTables]; }
+            get { return this[countMigrationTables] as QueryConfiguration; }
             set { this[countMigrationTables] = value; }
         }
 
@@ -69,7 +85,7 @@ namespace DbMigrations.Client.Configuration
         [ConfigurationProperty(createMigrationTable)]
         public QueryConfiguration CreateMigrationTable
         {
-            get { return (QueryConfiguration)this[createMigrationTable]; }
+            get { return this[createMigrationTable] as QueryConfiguration; }
             set { this[createMigrationTable] = value; }
         }
 
@@ -77,27 +93,39 @@ namespace DbMigrations.Client.Configuration
         [ConfigurationProperty(dropAllObjects)]
         public QueryConfiguration DropAllObjects
         {
-            get { return (QueryConfiguration)this[dropAllObjects]; }
+            get { return this[dropAllObjects] as QueryConfiguration; }
             set { this[dropAllObjects] = value; }
         }
 
-        const string configureTransaction = "configureTransaction";
-        [ConfigurationProperty(dropAllObjects)]
+        const string configureTransaction = "initializeTransaction";
+        [ConfigurationProperty(configureTransaction)]
         public QueryConfiguration ConfigureTransaction
         {
-            get { return (QueryConfiguration)this[configureTransaction]; }
+            get { return this[configureTransaction] as QueryConfiguration; }
             set { this[configureTransaction] = value; }
         }
 
+        public string ToQuery(QueryConfiguration q)
+        {
+            var template = q.Sql.Value;
+
+            var args = (
+                from a in q.Arguments.AllKeys
+                let p = GetType().GetProperty(a)
+                select p.GetValue(this)
+                ).ToArray();
+
+            return string.Format(template, args);
+        }
     }
 
     public class QueryConfiguration : ConfigurationElement
     {
         const string sql = "sql";
         [ConfigurationProperty(sql)]
-        public ConfigurationTextElement<string> Sql
+        public ConfigurationTextElement Sql
         {
-            get { return (ConfigurationTextElement<string>) this[sql]; }
+            get { return this[sql] as ConfigurationTextElement; }
             set { this[sql] = value; }
         }
 
@@ -105,15 +133,16 @@ namespace DbMigrations.Client.Configuration
         [ConfigurationProperty(parameters)]
         public NameValueConfigurationCollection Parameters
         {
-            get { return (NameValueConfigurationCollection)this[parameters]; }
+            get { return this[parameters] as NameValueConfigurationCollection; }
             set { this[parameters] = value; }
         }
         const string arguments = "arguments";
         [ConfigurationProperty(arguments)]
         public NameValueConfigurationCollection Arguments
         {
-            get { return (NameValueConfigurationCollection)this[arguments]; }
+            get { return this[arguments] as NameValueConfigurationCollection; }
             set { this[arguments] = value; }
         }
+
     }
 }
