@@ -166,8 +166,8 @@ namespace DbMigrations.Client.Configuration
             {
                 while (reader.MoveToNextAttribute())
                 {
-                    string propertyName = reader.Name;
-                    string xmlValue = reader.Value;
+                    var propertyName = reader.Name;
+                    var xmlValue = reader.Value;
                     var prop = props[propertyName];
                     var propertyValue = prop.Converter.ConvertFromInvariantString(xmlValue);
                     base[propertyName] = propertyValue;
@@ -176,7 +176,7 @@ namespace DbMigrations.Client.Configuration
             reader.MoveToContent();
             var content = reader.ReadElementContentAs(typeof(string), null);
             if (content != null)
-                Sql = (string)content;
+                Sql = ((string)content).Trim();
         }
     }
 }

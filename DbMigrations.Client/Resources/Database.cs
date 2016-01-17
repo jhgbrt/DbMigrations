@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Transactions;
 using DbMigrations.Client.Infrastructure;
 using DbMigrations.Client.Model;
@@ -13,7 +15,7 @@ namespace DbMigrations.Client.Resources
 
         public Database(IDb db, QueryConfiguration queryConfiguration)
         {
-            TableName = queryConfiguration.TableName;
+            TableName = queryConfiguration.TableName.Split('.').Last();
             Schema = queryConfiguration.Schema;
             _queryConfiguration = queryConfiguration;
             _db = db;
@@ -21,13 +23,40 @@ namespace DbMigrations.Client.Resources
 
         private bool MigrationsTableExists()
         {
-            return _db
-                .Sql(_queryConfiguration.CountMigrationTablesStatement)
-                .WithParameters(new
-                {
-                    TableName = TableName.Split('.').Last(),
-                    Schema
-                }).AsScalar<int>() > 0;
+            var query = _queryConfiguration.CountMigrationTablesStatement;
+
+            var escapeCharacter = _queryConfiguration.EscapeCharacter;
+
+            var parameterNames = query.Parameters(escapeCharacter);
+
+            var parameterWithCorrespondingProperties = (
+                from name in parameterNames
+                let prop = GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic)
+                select new {prop, name}
+                ).ToList();
+
+            if (parameterWithCorrespondingProperties.Any(item => item.prop == null))
+            {
+                var invalidProperties = parameterWithCorrespondingProperties
+                    .Where(item => item.prop == null)
+                    .Select(x => x.name)
+                    .ToList();
+                var message =
+                    $"The following {(invalidProperties.Count > 1 ? "properties are" : "property is")} not supported in the count query: '{string.Join(",", invalidProperties)}'.";
+                throw new Exception(message);
+            }
+
+            var parameters = 
+                from x in parameterWithCorrespondingProperties
+                let value = x.prop.GetValue(this)
+                select new {x.name, value};
+
+            var commandBuilder = parameters.Aggregate(
+                _db.Sql(query)
+                , (cb, p) => cb.WithParameter(p.name, p.value)
+                );
+
+            return commandBuilder.AsScalar<int>() > 0;
         }
 
 
@@ -37,12 +66,9 @@ namespace DbMigrations.Client.Resources
                 _db.Sql(_queryConfiguration.ConfigureTransactionStatement).AsNonQuery();
         }
 
-        private string[] GetDropAllObjectsStatements()
-        {
-            return _db.Sql(_queryConfiguration.DropAllObjectsStatement).Select(d => (string) d.Statement).ToArray();
-        }
-
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
         private string TableName { get; }
+        // ReSharper disable once UnusedAutoPropertyAccessor.Local
         private string Schema { get; }
 
         public void RunInTransaction(string script)
@@ -57,36 +83,33 @@ namespace DbMigrations.Client.Resources
 
         public void EnsureMigrationsTable()
         {
-            if (TableExists) return;
+            if (MigrationsTableExists()) return;
 
             _db.Sql(_queryConfiguration.CreateTableStatement).AsNonQuery();
         }
 
-        public bool TableExists => MigrationsTableExists();
-
         public void ClearAll()
         {
-            var statements = GetDropAllObjectsStatements();
+            var statements = (
+                from d in _db.Sql(_queryConfiguration.DropAllObjectsStatement)
+                select (string) d.Statement).ToArray();
+
             foreach (var statement in statements)
             {
                 _db.Execute(statement);
             }
         }
 
-        private string SelectMigration => _queryConfiguration.SelectStatement;
-
         public IList<Migration> GetMigrations()
         {
-            if (!TableExists)
-                return new List<Migration>();
-            return _db.Sql(SelectMigration).Select(d => new Migration(d.ScriptName, d.MD5, d.ExecutedOn, d.Content)).ToList();
+            return MigrationsTableExists() 
+                ? _db.Sql(_queryConfiguration.SelectStatement).Select(d => new Migration(d.ScriptName, d.MD5, d.ExecutedOn, d.Content)).ToList() 
+                : new List<Migration>();
         }
-
-        private string InsertMigration => _queryConfiguration.InsertStatement;
 
         public void Insert(Migration item)
         {
-            _db.Sql(InsertMigration).WithParameters(item).AsNonQuery();
+            _db.Sql(_queryConfiguration.InsertStatement).WithParameters(item).AsNonQuery();
         }
 
         public void ApplyMigration(Migration migration)

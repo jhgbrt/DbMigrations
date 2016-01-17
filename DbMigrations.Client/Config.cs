@@ -11,12 +11,12 @@ namespace DbMigrations.Client
 {
     class Config
     {
-        string _server;
-        string _user;
-        string _database;
-        string _password;
-        string _directory;
-        bool _useIntegratedSecurity = true;
+        private string _server;
+        private string _user;
+        private string _database;
+        private string _password;
+        private string _directory;
+        private bool _useIntegratedSecurity = true;
 
         private readonly OptionSet _optionSet;
 
@@ -89,7 +89,7 @@ namespace DbMigrations.Client
             };
         }
 
-        public bool ReInit { get; set; }
+        public bool ReInit { get; private set; }
 
         public string ProviderName { get; private set; }
 
@@ -108,9 +108,11 @@ namespace DbMigrations.Client
             if (string.IsNullOrEmpty(_directory))
                 errors.AppendLine("No folder");
             else if (!System.IO.Directory.Exists(_directory))
-                errors.AppendLine(string.Format("Folder '{0}' not found", _directory));
+                errors.AppendLine($"Folder '{_directory}' not found");
             else if (!System.IO.Directory.Exists(Path.Combine(_directory, "Migrations")))
-                errors.AppendLine(string.Format(@"Folder '{0}\Migrations' not found. By convention, the migration scripts should be located in a subfolder called 'Migrations'", _directory));
+                errors.AppendLine($"Folder '{_directory}\\Migrations' not found. " +
+                                   "By convention, the migration scripts should be " +
+                                   "located in a subfolder called 'Migrations'");
 
             if (!_useIntegratedSecurity)
             {
@@ -169,16 +171,13 @@ namespace DbMigrations.Client
             return result;
         }
 
-        public string Directory { get { return _directory; } }
+        public string Directory => _directory;
         public string ConnectionString { get; private set; }
-        public bool WhatIf { get; set; }
-        public bool Help { get; set; }
+        public bool WhatIf { get; private set; }
+        public bool Help { get; private set; }
         public string Schema { get; private set; }
 
-        private DbProviderFactory DbProviderFactory
-        {
-            get { return DbProviderFactories.GetFactory(ProviderName); }
-        }
+        private DbProviderFactory DbProviderFactory => DbProviderFactories.GetFactory(ProviderName);
 
         private DbConnectionStringBuilder _connectionStringBuilder;
 
@@ -197,10 +196,7 @@ namespace DbMigrations.Client
             }
         }
 
-        public string UserName
-        {
-            get { return _user; }
-        }
+        public string UserName => _user;
 
         public bool PersistConfiguration { get; private set; }
 

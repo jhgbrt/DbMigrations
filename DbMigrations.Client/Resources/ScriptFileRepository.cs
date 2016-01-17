@@ -41,8 +41,6 @@ namespace DbMigrations.Client.Resources
             return scripts;
         }
 
-
-
         private static string ReadFile(string name)
         {
             string content;

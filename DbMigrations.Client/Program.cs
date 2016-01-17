@@ -10,7 +10,7 @@ using QueryConfiguration = DbMigrations.Client.Resources.QueryConfiguration;
 
 namespace DbMigrations.Client
 {
-    public class Program
+    public static class Program
     {
         private static readonly Logger Logger = new Logger();
         public static int Main(string[] args)
@@ -34,17 +34,9 @@ namespace DbMigrations.Client
             }
 
             var queryConfiguration = QueryConfiguration.GetQueryConfiguration(config);
-            var c = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-            var m = (DbMigrationsConfiguration)c.GetSection("migrationConfig");
-            if (m == null)
-            {
-                m = new DbMigrationsConfiguration();
-                c.Sections.Add("migrationConfig", m);
-            }
             if (queryConfiguration != null && config.PersistConfiguration)
             {
-                queryConfiguration.SaveToConfig(m);
-                c.Save(ConfigurationSaveMode.Minimal);
+                SaveConfiguration(queryConfiguration);
                 return 0;
             }
 
@@ -53,7 +45,6 @@ namespace DbMigrations.Client
                 var manager = CreateMigrationManager(config, db, queryConfiguration);
                 try
                 {
-
                     Logger
                         .InfoLine("db migration utility (c) Jeroen Haegebaert 2016")
                         .Line();
@@ -106,6 +97,19 @@ namespace DbMigrations.Client
                 }
                 return 0;
             }
+        }
+
+        private static void SaveConfiguration(QueryConfiguration queryConfiguration)
+        {
+            var c = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            var m = (DbMigrationsConfiguration) c.GetSection("migrationConfig");
+            if (m == null)
+            {
+                m = new DbMigrationsConfiguration();
+                c.Sections.Add("migrationConfig", m);
+            }
+            queryConfiguration.SaveToConfig(m);
+            c.Save(ConfigurationSaveMode.Minimal);
         }
 
         private static IMigrationManager CreateMigrationManager(Config config, IDb db, QueryConfiguration queryConfig)

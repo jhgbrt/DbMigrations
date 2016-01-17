@@ -9,14 +9,14 @@ namespace DbMigrations.Client.Application
 {
     class BufferedWriter
     {
-        readonly Logger Logger;
-        readonly Queue<string> lines = new Queue<string>();
+        readonly Logger _logger;
+        readonly Queue<string> _lines = new Queue<string>();
         private int _flush;
         private int _context = 2;
 
         public BufferedWriter(Logger logger)
         {
-            Logger = logger;
+            _logger = logger;
         }
 
         public void Write(string text)
@@ -25,24 +25,24 @@ namespace DbMigrations.Client.Application
             {
                 if (_flush > 0)
                 {
-                    Logger.Write(ConsoleColor.Gray, line);
+                    _logger.Write(ConsoleColor.Gray, line);
                     _flush--;
                 }
                 else
                 {
-                    lines.Enqueue(line);
+                    _lines.Enqueue(line);
                 }
             }
-            while (lines.Count > _context) lines.Dequeue();
+            while (_lines.Count > _context) _lines.Dequeue();
         }
 
         public void Write(string text, ConsoleColor color)
         {
-            while (lines.Any())
+            while (_lines.Any())
             {
-                Logger.Write(ConsoleColor.Gray, lines.Dequeue());
+                _logger.Write(ConsoleColor.Gray, _lines.Dequeue());
             }
-            Logger.Write(color, text);
+            _logger.Write(color, text);
             _flush = _context;
         }
 

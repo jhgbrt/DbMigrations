@@ -60,7 +60,7 @@ namespace DbMigrations.UnitTests.Configuration
         [TestMethod]
         public void SqlParameterHasElement()
         {
-            Assert.AreEqual("MyParameter1,MyParameter2", config.CountMigrationTables.Parameters);
+            CollectionAssert.AreEqual(new[] { "MyParameter1", "MyParameter2" } , config.CountMigrationTables.Parameters);
         }
 
         [TestMethod]
@@ -71,7 +71,7 @@ namespace DbMigrations.UnitTests.Configuration
         [TestMethod]
         public void SqlArgumentHasElement()
         {
-            Assert.AreEqual("MyArg1,MyArg2", config.CountMigrationTables.Arguments);
+            CollectionAssert.AreEqual(new[] { "MyArg1","MyArg2"}, config.CountMigrationTables.Arguments);
         }
     }
 }
