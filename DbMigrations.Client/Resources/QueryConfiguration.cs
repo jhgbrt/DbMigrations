@@ -46,7 +46,8 @@ namespace DbMigrations.Client.Resources
             public static QueryConfiguration Instance(Config config)
             {
                 var schema = config.Schema ?? "dbo";
-                return new QueryConfiguration("System.Data.SqlClient", "@", $"{schema}.Migrations", schema, 
+                var tableName = $"{schema}.Migrations";
+                return new QueryConfiguration("System.Data.SqlClient", "@", tableName, schema, 
                     "SET XACT_ABORT ON", 
                     CreateTableTemplate,
                     CountMigrationTablesStatement, 
@@ -105,7 +106,7 @@ namespace DbMigrations.Client.Resources
             public static QueryConfiguration Instance(Config config)
             {
                 var schema = config.Schema ?? config.UserName;
-                var tableName = $"{schema}.MIGRATIONS";
+                var tableName = $"{schema}.Migrations";
                 return new QueryConfiguration("Oracle.ManagedDataAccess.Client", ":", tableName, schema, string.Empty, CreateTableTemplate,
                     CountMigrationTablesStatement, DropAllObjectsStatement);
             }
