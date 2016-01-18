@@ -9,7 +9,7 @@ namespace DbMigrations.UnitTests.Configuration
     [TestClass]
     public class DbMigrationConfigurationSectionTests
     {
-        DbMigrationsConfiguration config = (DbMigrationsConfiguration)ConfigurationManager.GetSection("migrationConfig");
+        DbMigrationsConfigurationSection config = (DbMigrationsConfigurationSection)ConfigurationManager.GetSection("migrationConfig");
         [TestMethod]
         public void CanReadConfigSection()
         {

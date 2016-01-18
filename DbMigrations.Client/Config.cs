@@ -232,6 +232,7 @@ namespace DbMigrations.Client
     {
         public static readonly DataProvider[] DataProviders =
             {
+                new DataProvider {Name = "Microsoft SQL Server Compact Data Provider 4.0" , Description = ".NET Framework Data Provider for Microsoft SQL Server Compact", InvariantName = "System.Data.SqlServerCe.4.0", AssemblyQualifiedName = "System.Data.SqlServerCe.SqlCeProviderFactory, System.Data.SqlServerCe, Version=4.0.0.0, Culture=neutral, PublicKeyToken=89845dcd8080cc91"},
                 new DataProvider {Name = "SQLite Data Provider" , Description = ".Net Framework Data Provider for SQLite", InvariantName = "System.Data.SQLite", AssemblyQualifiedName = "System.Data.SQLite.SQLiteFactory, System.Data.SQLite"},
                 new DataProvider {Name = "ODP.NET, Managed Driver", Description = "Oracle Data Provider for .NET, Managed Driver", InvariantName = "Oracle.ManagedDataAccess.Client", AssemblyQualifiedName = "Oracle.ManagedDataAccess.Client.OracleClientFactory, Oracle.ManagedDataAccess"},
             };

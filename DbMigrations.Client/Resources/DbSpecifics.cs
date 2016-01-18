@@ -4,11 +4,11 @@ using DbMigrations.Client.Infrastructure;
 
 namespace DbMigrations.Client.Resources
 {
-    class QueryConfiguration
+    class DbSpecifics
     {
-        public static QueryConfiguration GetQueryConfiguration(Config config)
+        public static DbSpecifics Get(Config config)
         {
-            var c = (DbMigrationsConfiguration) ConfigurationManager.GetSection("migrationConfig");
+            var c = (DbMigrationsConfigurationSection) ConfigurationManager.GetSection("migrationConfig");
             if (!string.IsNullOrEmpty(c?.InvariantName))
                 return FromConfigurationSection(c);
 
@@ -28,12 +28,12 @@ namespace DbMigrations.Client.Resources
             return SqlServer.Instance(config);
         }
 
-        private static QueryConfiguration FromConfigurationSection(DbMigrationsConfiguration config)
+        private static DbSpecifics FromConfigurationSection(DbMigrationsConfigurationSection config)
         {
             if (string.IsNullOrEmpty(config?.InvariantName))
                 return null;
 
-            return new QueryConfiguration(
+            return new DbSpecifics(
                 config.InvariantName,
                 config.EscapeChar,
                 config.TableName,
@@ -47,7 +47,7 @@ namespace DbMigrations.Client.Resources
 
         private static class SqlServer
         {
-            public static QueryConfiguration Instance(Config config)
+            public static DbSpecifics Instance(Config config)
             {
                 var schema = config.Schema ?? "dbo";
                 var tableName = $"{schema}.Migrations";
@@ -55,7 +55,7 @@ namespace DbMigrations.Client.Resources
                 var escapeCharacter = "@";
                 var initTransaction = "SET XACT_ABORT ON";
 
-                return new QueryConfiguration(
+                return new DbSpecifics(
                     invariantName, 
                     escapeCharacter, 
                     tableName, 
@@ -115,14 +115,14 @@ namespace DbMigrations.Client.Resources
 
         private static class Oracle
         {
-            public static QueryConfiguration Instance(Config config)
+            public static DbSpecifics Instance(Config config)
             {
                 var schema = config.Schema ?? config.UserName;
                 var tableName = $"{schema}.MIGRATIONS";
                 var invariantName = "Oracle.ManagedDataAccess.Client";
                 var escapeCharacter = ":";
 
-                return new QueryConfiguration(
+                return new DbSpecifics(
                     invariantName, 
                     escapeCharacter, 
                     tableName, schema, 
@@ -157,9 +157,9 @@ namespace DbMigrations.Client.Resources
 
         private static class SqLite
         {
-            public static QueryConfiguration Instance()
+            public static DbSpecifics Instance()
             {
-                return new QueryConfiguration(
+                return new DbSpecifics(
                     "System.Data.SqLite",
                     "@", "Migrations", string.Empty, string.Empty
                     , CreateTableTemplate
@@ -185,16 +185,15 @@ namespace DbMigrations.Client.Resources
                   "FROM SQLITE_MASTER \r\n" +
                   "WHERE TYPE = 'table';";
         }
-
-
+        
         private static class SqlServerCe
         {
-            public static QueryConfiguration Instance()
+            public static DbSpecifics Instance()
             {
                 var invariantName = "System.Data.SqlServerCe.4.0";
                 var escapeCharacter = "@";
                 var tableName = "Migrations";
-                return new QueryConfiguration(
+                return new DbSpecifics(
                     invariantName,
                     escapeCharacter, 
                     tableName, 
@@ -224,7 +223,7 @@ namespace DbMigrations.Client.Resources
                   "FROM information_schema.tables";
         }
 
-        private QueryConfiguration(string invariantName, string escapeCharacter, string tableName, string schema,
+        private DbSpecifics(string invariantName, string escapeCharacter, string tableName, string schema,
             string configureTransactionStatement, string createTableTemplate, string countMigrationTablesStatement,
             string dropAllObjectsStatement)
         {
@@ -259,7 +258,7 @@ namespace DbMigrations.Client.Resources
         public string SelectStatement => SelectTemplate.FormatWith(new {TableName});
         public string CreateTableStatement => CreateTableTemplate.FormatWith(new {TableName});
 
-        public void SaveToConfig(DbMigrationsConfiguration config)
+        public void SaveToConfig(DbMigrationsConfigurationSection config)
         {
             config.InvariantName = InvariantName;
             config.TableName = TableName;

@@ -11,28 +11,28 @@ namespace DbMigrations.Client.Resources
     internal class Database : IDatabase
     {
         private readonly IDb _db;
-        private readonly QueryConfiguration _queryConfiguration;
+        private readonly DbSpecifics _dbSpecifics;
 
-        public Database(IDb db, QueryConfiguration queryConfiguration)
+        public Database(IDb db, DbSpecifics dbSpecifics)
         {
-            TableName = queryConfiguration.TableName.Split('.').Last();
-            Schema = queryConfiguration.Schema;
-            _queryConfiguration = queryConfiguration;
+            TableName = dbSpecifics.TableName.Split('.').Last();
+            Schema = dbSpecifics.Schema;
+            _dbSpecifics = dbSpecifics;
             _db = db;
         }
 
         private bool MigrationsTableExists()
         {
-            var query = _queryConfiguration.CountMigrationTablesStatement;
+            var query = _dbSpecifics.CountMigrationTablesStatement;
 
-            var escapeCharacter = _queryConfiguration.EscapeCharacter;
+            var escapeCharacter = _dbSpecifics.EscapeCharacter;
             
             var parameterNames = query.Parameters(escapeCharacter);
             
             var parameters = GetParameterValues(parameterNames);
 
             var count = _db
-                .Sql(_queryConfiguration.CountMigrationTablesStatement)
+                .Sql(_dbSpecifics.CountMigrationTablesStatement)
                 .WithParameters(parameters)
                 .AsScalar<int>();
 
@@ -69,8 +69,8 @@ namespace DbMigrations.Client.Resources
 
         private void InitializeTransaction()
         {
-            if (!string.IsNullOrEmpty(_queryConfiguration?.ConfigureTransactionStatement))
-                _db.Sql(_queryConfiguration.ConfigureTransactionStatement).AsNonQuery();
+            if (!string.IsNullOrEmpty(_dbSpecifics?.ConfigureTransactionStatement))
+                _db.Sql(_dbSpecifics.ConfigureTransactionStatement).AsNonQuery();
         }
 
         // ReSharper disable once UnusedAutoPropertyAccessor.Local
@@ -92,13 +92,13 @@ namespace DbMigrations.Client.Resources
         {
             if (MigrationsTableExists()) return;
 
-            _db.Execute(_queryConfiguration.CreateTableStatement);
+            _db.Execute(_dbSpecifics.CreateTableStatement);
         }
 
         public void ClearAll()
         {
             var statements = (
-                from d in _db.Sql(_queryConfiguration.DropAllObjectsStatement)
+                from d in _db.Sql(_dbSpecifics.DropAllObjectsStatement)
                 select (string) d.Statement
                 ).ToArray();
 
@@ -114,7 +114,7 @@ namespace DbMigrations.Client.Resources
                 return new List<Migration>();
 
             var migrations = (
-                from d in _db.Sql(_queryConfiguration.SelectStatement)
+                from d in _db.Sql(_dbSpecifics.SelectStatement)
                 select new Migration(d.ScriptName, d.MD5, d.ExecutedOn, d.Content)
                 ).ToArray();
 
@@ -123,7 +123,7 @@ namespace DbMigrations.Client.Resources
 
         public void Insert(Migration item)
         {
-            _db.Execute(_queryConfiguration.InsertStatement, item);
+            _db.Execute(_dbSpecifics.InsertStatement, item);
         }
 
         public void ApplyMigration(Migration migration)
