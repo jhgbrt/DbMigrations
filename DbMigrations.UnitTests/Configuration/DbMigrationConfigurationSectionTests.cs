@@ -49,29 +49,41 @@ namespace DbMigrations.UnitTests.Configuration
         [TestMethod]
         public void CountMigrationTablesHasSql()
         {
-            Assert.AreEqual("SELECT *", config.CountMigrationTables.Sql.Trim());
+            Assert.AreEqual("SELECT count(*) FROM information_schema.tables WHERE TableName = @TableName AND Schema = @Schema", config.CountMigrationTables.Sql.Trim());
         }
 
         [TestMethod]
-        public void SqlParameterIsNotNull()
+        public void CreateMigrationTableProperty()
         {
-            Assert.IsNotNull(config.CountMigrationTables.Parameters);
-        }
-        [TestMethod]
-        public void SqlParameterHasElement()
-        {
-            CollectionAssert.AreEqual(new[] { "MyParameter1", "MyParameter2" } , config.CountMigrationTables.Parameters);
+            Assert.IsNotNull(config.CreateMigrationTable);
         }
 
         [TestMethod]
-        public void SqlArgumentIsNotNull()
+        public void CreateMigrationTableHasSql()
         {
-            Assert.IsNotNull(config.CountMigrationTables.Arguments);
+            Assert.AreEqual("CREATE TABLE {TableName} (ScriptName nvarchar2(100))", config.CreateMigrationTable.Sql);
         }
         [TestMethod]
-        public void SqlArgumentHasElement()
+        public void DropAllObjectsProperty()
         {
-            CollectionAssert.AreEqual(new[] { "MyArg1","MyArg2"}, config.CountMigrationTables.Arguments);
+            Assert.IsNotNull(config.DropAllObjects);
+        }
+
+        [TestMethod]
+        public void DropAllObjectsHasSql()
+        {
+            Assert.AreEqual("SELECT x AS Statement", config.DropAllObjects.Sql);
+        }
+        [TestMethod]
+        public void InitTxProperty()
+        {
+            Assert.IsNotNull(config.ConfigureTransaction);
+        }
+
+        [TestMethod]
+        public void InitTxHasSql()
+        {
+            Assert.AreEqual("SELECT 'INIT TX'", config.ConfigureTransaction.Sql);
         }
     }
 }

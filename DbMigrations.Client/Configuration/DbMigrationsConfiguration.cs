@@ -38,7 +38,7 @@ namespace DbMigrations.Client.Configuration
             set { this[schema] = value; }
         }
 
-        const string countMigrationTables = "countMigrationTables";
+        const string countMigrationTables = "count";
         [ConfigurationProperty(countMigrationTables)]
         public QueryConfiguration CountMigrationTables
         {
@@ -46,7 +46,7 @@ namespace DbMigrations.Client.Configuration
             set { this[countMigrationTables] = value; }
         }
 
-        const string createMigrationTable = "createMigrationTable";
+        const string createMigrationTable = "create";
         [ConfigurationProperty(createMigrationTable)]
         public QueryConfiguration CreateMigrationTable
         {
@@ -54,7 +54,7 @@ namespace DbMigrations.Client.Configuration
             set { this[createMigrationTable] = value; }
         }
 
-        const string dropAllObjects = "dropAllObjects";
+        const string dropAllObjects = "drop";
         [ConfigurationProperty(dropAllObjects)]
         public QueryConfiguration DropAllObjects
         {
@@ -70,74 +70,17 @@ namespace DbMigrations.Client.Configuration
             set { this[configureTransaction] = value; }
         }
 
-        public string ToQuery(QueryConfiguration q)
-        {
-            var template = q.Sql ?? string.Empty;
-            if (!q.Arguments.Any()) return template;
-            var args = (
-                from a in q.Arguments
-                let p = GetType().GetProperty(a)
-                select p.GetValue(this)
-                ).ToArray();
-
-            return string.Format(template, args);
-        }
+        public string ToQuery(QueryConfiguration q) => q.Sql ?? string.Empty;
     }
 
     public class QueryConfiguration : ConfigurationElement
     {
-        public QueryConfiguration()
-        {
-            Arguments = new string[0];
-        }
-
         const string sql = "sql";
         [ConfigurationProperty(sql)]
         public string Sql
         {
             get { return this[sql] as string; }
             set { this[sql] = value; }
-        }
-
-        const string parameters = "parameters";
-        [ConfigurationProperty(parameters)]
-        public string ParametersStr
-        {
-            get { return this[parameters] as string; }
-            set { this[parameters] = value; }
-        }
-
-        public string[] Parameters
-        {
-            get
-            {
-                return string.IsNullOrEmpty(ParametersStr) ? new string[] { } : ParametersStr.Split(',');
-            }
-            set
-            {
-                ParametersStr = value == null ? null : string.Join(",", value);
-            }
-        }
-
-        const string arguments = "arguments";
-
-        [ConfigurationProperty(arguments)]
-        public string ArgumentsStr
-        {
-            get { return this[arguments] as string; }
-            set { this[arguments] = value; }
-
-        }
-        public string[] Arguments
-        {
-            get
-            {
-                return string.IsNullOrEmpty(ArgumentsStr) ? new string[] { } : ArgumentsStr.Split(',');
-            }
-            set
-            {
-                ArgumentsStr = value == null ? null : string.Join(",", value);
-            }
         }
 
         protected override bool SerializeElement(XmlWriter writer, bool serializeCollectionKey)
@@ -150,10 +93,6 @@ namespace DbMigrations.Client.Configuration
             if (writer == null)
                 return true;
             writer.WriteStartElement(elementName);
-            if (!string.IsNullOrEmpty(ArgumentsStr))
-                writer.WriteAttributeString(arguments, ArgumentsStr);
-            if (!string.IsNullOrEmpty(ParametersStr))
-                writer.WriteAttributeString(parameters, ParametersStr);
             writer.WriteCData(Sql);
             writer.WriteEndElement();
             return false;

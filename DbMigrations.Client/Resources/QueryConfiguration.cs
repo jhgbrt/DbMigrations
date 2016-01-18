@@ -1,5 +1,6 @@
 using System.Configuration;
 using DbMigrations.Client.Configuration;
+using DbMigrations.Client.Infrastructure;
 
 namespace DbMigrations.Client.Resources
 {
@@ -59,7 +60,7 @@ namespace DbMigrations.Client.Resources
 
 
             private static string CreateTableTemplate
-                = "CREATE TABLE {0} (\r\n" +
+                = "CREATE TABLE {TableName} (\r\n" +
                   "      ScriptName nvarchar(255) NOT NULL, \r\n" +
                   "      MD5 nvarchar(32) NOT NULL, \r\n" +
                   "      ExecutedOn datetime NOT NULL,\r\n" +
@@ -69,34 +70,34 @@ namespace DbMigrations.Client.Resources
 
             private static string DropAllObjectsStatement
                 = "-- procedures\r\n" +
-                  "Select \'drop procedure [\' + schema_name(schema_id) + \'].[\' + name + \']\' [Statement]\r\n" +
-                  "from sys.procedures\r\n" +
-                  "union all\r\n" +
+                  "SELECT \'DROP PROCEDURE [\' + schema_name(schema_id) + \'].[\' + name + \']\' [Statement]\r\n" +
+                  "FROM sys.procedures\r\n" +
+                  "UNION ALL\r\n" +
                   "-- check constraints\r\n" +
-                  "Select \'alter table [\' + schema_name(schema_id) + \'].[\' + object_name( parent_object_id ) + \']    drop constraint [\' + name + \']\'\r\n" +
-                  "from sys.check_constraints\r\n" +
-                  "union all\r\n" +
+                  "SELECT \'ALTER TABLE [\' + schema_name(schema_id) + \'].[\' + object_name( parent_object_id ) + \']    drop constraint [\' + name + \']\'\r\n" +
+                  "FROM sys.check_constraints\r\n" +
+                  "UNION ALL\r\n" +
                   "-- views\r\n" +
-                  "Select \'drop view [\' + schema_name(schema_id) + \'].[\' + name + \']\'\r\n" +
-                  "from sys.views\r\n" +
-                  "union all\r\n" +
+                  "SELECT \'DROP VIEW [\' + schema_name(schema_id) + \'].[\' + name + \']\'\r\n" +
+                  "FROM sys.views\r\n" +
+                  "UNION ALL\r\n" +
                   "-- foreign keys\r\n" +
-                  "Select \'alter table [\' + schema_name(schema_id) + \'].[\' + object_name( parent_object_id ) + \'] drop constraint [\' + name + \']\'\r\n" +
-                  "from sys.foreign_keys\r\n" +
-                  "union all\r\n" +
+                  "SELECT \'ALTER TABLE [\' + schema_name(schema_id) + \'].[\' + object_name( parent_object_id ) + \'] drop constraint [\' + name + \']\'\r\n" +
+                  "FROM sys.foreign_keys\r\n" +
+                  "UNION ALL\r\n" +
                   "-- tables\r\n" +
-                  "Select \'drop table [\' + schema_name(schema_id) + \'].[\' + name + \']\'\r\n" +
-                  "from sys.tables\r\n" +
-                  "union all\r\n" +
+                  "SELECT \'DROP TABLE [\' + schema_name(schema_id) + \'].[\' + name + \']\'\r\n" +
+                  "FROM sys.tables\r\n" +
+                  "UNION ALL\r\n" +
                   "-- functions\r\n" +
-                  "Select \'drop function [\' + schema_name(schema_id) + \'].[\' + name + \']\'\r\n" +
-                  "from sys.objects\r\n" +
-                  "where type in ( \'FN\', \'IF\', \'TF\' )\r\n" +
-                  "union all\r\n" +
+                  "SELECT \'DROP FUNCTION [\' + schema_name(schema_id) + \'].[\' + name + \']\'\r\n" +
+                  "FROM sys.objects\r\n" +
+                  "WHERE type IN ( \'FN\', \'IF\', \'TF\' )\r\n" +
+                  "UNION ALL\r\n" +
                   "-- user defined types\r\n" +
-                  "Select \'drop type [\' + schema_name(schema_id) + \'].[\' + name + \']\'\r\n" +
-                  "from sys.types\r\n" +
-                  "where is_user_defined = 1";
+                  "SELECT \'DROP TYPE [\' + schema_name(schema_id) + \'].[\' + name + \']\'\r\n" +
+                  "FROM sys.types\r\n" +
+                  "WHERE is_user_defined = 1";
         }
 
         private static class Oracle
@@ -115,7 +116,7 @@ namespace DbMigrations.Client.Resources
                   "WHERE UPPER(TABLE_NAME) = :TableName and OWNER = :Schema";
 
             private static string CreateTableTemplate
-                = "CREATE TABLE {0} (\r\n" +
+                = "CREATE TABLE {TableName} (\r\n" +
                   "     ScriptName nvarchar2(255) not null, \r\n" +
                   "     MD5 nvarchar2(32) not null, \r\n" +
                   "     ExecutedOn date not null, \r\n" +
@@ -151,7 +152,7 @@ namespace DbMigrations.Client.Resources
                   "WHERE type = 'table' AND name = @TableName";
 
             private static string CreateTableTemplate
-                = "CREATE TABLE IF NOT EXISTS {0} (\r\n" +
+                = "CREATE TABLE IF NOT EXISTS {TableName} (\r\n" +
                   "      ScriptName nvarchar NOT NULL PRIMARY KEY, \r\n" +
                   "      MD5 nvarchar NOT NULL, \r\n" +
                   "      ExecutedOn datetime NOT NULL,\r\n" +
@@ -176,13 +177,13 @@ namespace DbMigrations.Client.Resources
             DropAllObjectsStatement = dropAllObjectsStatement;
         }
 
-        private string InsertTemplate { get; } = 
-            "INSERT INTO {0} (ScriptName, MD5, ExecutedOn, Content) " +
-            "VALUES ({1}ScriptName, {1}MD5, {1}ExecutedOn, {1}Content)";
+        private string InsertTemplate { get; } =
+            "INSERT INTO {TableName} (ScriptName, MD5, ExecutedOn, Content) " +
+            "VALUES ({EscapeCharacter}ScriptName, {EscapeCharacter}MD5, {EscapeCharacter}ExecutedOn, {EscapeCharacter}Content)";
 
         private string SelectTemplate { get; } =
             "SELECT ScriptName, MD5, ExecutedOn, Content " +
-            "FROM {0} " +
+            "FROM {TableName} " +
             "ORDER BY ScriptName ASC";
 
         public string TableName { get; }
@@ -193,9 +194,9 @@ namespace DbMigrations.Client.Resources
         private string CreateTableTemplate { get; }
         public string CountMigrationTablesStatement { get; }
         public string DropAllObjectsStatement { get; }
-        public string InsertStatement => string.Format(InsertTemplate, TableName, EscapeCharacter);
-        public string SelectStatement => string.Format(SelectTemplate, TableName);
-        public string CreateTableStatement => string.Format(CreateTableTemplate, TableName);
+        public string InsertStatement => InsertTemplate.FormatWith(new {TableName, EscapeCharacter});
+        public string SelectStatement => SelectTemplate.FormatWith(new {TableName});
+        public string CreateTableStatement => CreateTableTemplate.FormatWith(new {TableName});
         public void SaveToConfig(DbMigrationsConfiguration config)
         {
             config.InvariantName = InvariantName;
@@ -203,11 +204,9 @@ namespace DbMigrations.Client.Resources
             config.Schema = Schema;
             config.EscapeChar = EscapeCharacter;
             config.CountMigrationTables.Sql = CountMigrationTablesStatement;
-            config.CountMigrationTables.Parameters = new[] {"TableName", "Schema"};
             config.DropAllObjects.Sql = DropAllObjectsStatement;
             config.ConfigureTransaction.Sql = ConfigureTransactionStatement;
             config.CreateMigrationTable.Sql = CreateTableTemplate;
-            config.CreateMigrationTable.Arguments = new [] { "TableName"};
         }
     }
 }
