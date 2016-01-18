@@ -68,6 +68,7 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="command"></param>
         int Execute(string command);
+        int Execute(string command, object parameters);
     }
 
     /// <summary>
@@ -376,6 +377,11 @@ namespace DbMigrations.Client.Infrastructure
         {
             return Sql(command).AsNonQuery();
         }
+
+        public int Execute(string command, object parameters)
+        {
+            return Sql(command).WithParameters(parameters).AsNonQuery();
+        }
     }
 
     static class DataReaderExtensions
@@ -624,6 +630,21 @@ namespace DbMigrations.Client.Infrastructure
         }
 
         /// <summary>
+        /// Adds a parameter for each item in the dictionary, with the key as the name of the parameter 
+        /// and the value as the corresponding parameter value
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        public CommandBuilder WithParameters(IDictionary<string,object> parameters)
+        {
+            foreach (var item in parameters)
+            {
+                WithParameter(item.Key, item.Value);
+            }
+            return this;
+        }
+
+        /// <summary>
         /// Adds a parameter for each property of the given object, with the property name as the name of the parameter 
         /// and the property value as the corresponding parameter value
         /// </summary>
@@ -631,12 +652,20 @@ namespace DbMigrations.Client.Infrastructure
         /// <returns></returns>
         public CommandBuilder WithParameters(object parameters)
         {
-            var props = parameters.GetType().GetProperties();
-            foreach (var item in props)
+            return WithParameters(ToDictionary(parameters));
+        }
+
+        private static IDictionary<string, object> ToDictionary(object source)
+        {
+            var dictionary = source as IDictionary<string, object>;
+            if (dictionary != null) return dictionary;
+            
+            dictionary = new Dictionary<string, object>();
+            foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(source))
             {
-                WithParameter(item.Name, item.GetValue(parameters, null));
+                dictionary[property.Name] = property.GetValue(source);
             }
-            return this;
+            return dictionary;
         }
 
         /// <summary>

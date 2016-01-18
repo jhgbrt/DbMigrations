@@ -8,7 +8,7 @@ namespace DbMigrations.Client.Resources
     {
         public static QueryConfiguration GetQueryConfiguration(Config config)
         {
-            var c = (DbMigrationsConfiguration)ConfigurationManager.GetSection("migrationConfig");
+            var c = (DbMigrationsConfiguration) ConfigurationManager.GetSection("migrationConfig");
             if (!string.IsNullOrEmpty(c?.InvariantName))
                 return FromConfigurationSection(c);
 
@@ -51,8 +51,16 @@ namespace DbMigrations.Client.Resources
             {
                 var schema = config.Schema ?? "dbo";
                 var tableName = $"{schema}.Migrations";
-                return new QueryConfiguration("System.Data.SqlClient", "@", tableName, schema,
-                    "SET XACT_ABORT ON",
+                var invariantName = "System.Data.SqlClient";
+                var escapeCharacter = "@";
+                var initTransaction = "SET XACT_ABORT ON";
+
+                return new QueryConfiguration(
+                    invariantName, 
+                    escapeCharacter, 
+                    tableName, 
+                    schema,
+                    initTransaction,
                     CreateTableTemplate,
                     CountMigrationTablesStatement,
                     DropAllObjectsStatement);
@@ -111,7 +119,15 @@ namespace DbMigrations.Client.Resources
             {
                 var schema = config.Schema ?? config.UserName;
                 var tableName = $"{schema}.MIGRATIONS";
-                return new QueryConfiguration("Oracle.ManagedDataAccess.Client", ":", tableName, schema, string.Empty, CreateTableTemplate,
+                var invariantName = "Oracle.ManagedDataAccess.Client";
+                var escapeCharacter = ":";
+
+                return new QueryConfiguration(
+                    invariantName, 
+                    escapeCharacter, 
+                    tableName, schema, 
+                    string.Empty,
+                    CreateTableTemplate,
                     CountMigrationTablesStatement, DropAllObjectsStatement);
             }
 
@@ -175,9 +191,15 @@ namespace DbMigrations.Client.Resources
         {
             public static QueryConfiguration Instance()
             {
+                var invariantName = "System.Data.SqlServerCe.4.0";
+                var escapeCharacter = "@";
+                var tableName = "Migrations";
                 return new QueryConfiguration(
-                    "System.Data.SqlServerCe.4.0",
-                    "@", "Migrations", string.Empty, string.Empty
+                    invariantName,
+                    escapeCharacter, 
+                    tableName, 
+                    string.Empty, 
+                    string.Empty
                     , CreateTableTemplate
                     , CountMigrationTablesStatement
                     , DropAllObjectsStatement);
@@ -236,6 +258,7 @@ namespace DbMigrations.Client.Resources
         public string InsertStatement => InsertTemplate.FormatWith(new {TableName, EscapeCharacter});
         public string SelectStatement => SelectTemplate.FormatWith(new {TableName});
         public string CreateTableStatement => CreateTableTemplate.FormatWith(new {TableName});
+
         public void SaveToConfig(DbMigrationsConfiguration config)
         {
             config.InvariantName = InvariantName;

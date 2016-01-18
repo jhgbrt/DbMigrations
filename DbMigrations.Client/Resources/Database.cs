@@ -26,9 +26,21 @@ namespace DbMigrations.Client.Resources
             var query = _queryConfiguration.CountMigrationTablesStatement;
 
             var escapeCharacter = _queryConfiguration.EscapeCharacter;
-
+            
             var parameterNames = query.Parameters(escapeCharacter);
+            
+            var parameters = GetParameterValues(parameterNames);
 
+            var count = _db
+                .Sql(_queryConfiguration.CountMigrationTablesStatement)
+                .WithParameters(parameters)
+                .AsScalar<int>();
+
+            return count > 0;
+        }
+
+        private IDictionary<string, object> GetParameterValues(IEnumerable<string> parameterNames)
+        {
             var parameterWithCorrespondingProperties = (
                 from name in parameterNames
                 let prop = GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.NonPublic)
@@ -46,17 +58,12 @@ namespace DbMigrations.Client.Resources
                 throw new Exception(message);
             }
 
-            var parameters = 
+            var parameters =
                 from x in parameterWithCorrespondingProperties
                 let value = x.prop.GetValue(this)
                 select new {x.name, value};
 
-            var commandBuilder = parameters.Aggregate(
-                _db.Sql(query)
-                , (cb, p) => cb.WithParameter(p.name, p.value)
-                );
-
-            return commandBuilder.AsScalar<int>() > 0;
+            return parameters.ToDictionary(x => x.name, x => x.value);
         }
 
 
@@ -76,7 +83,7 @@ namespace DbMigrations.Client.Resources
             using (var scope = new TransactionScope())
             {
                 InitializeTransaction();
-                _db.Sql(script).AsNonQuery();
+                _db.Execute(script);
                 scope.Complete();
             }
         }
@@ -85,14 +92,15 @@ namespace DbMigrations.Client.Resources
         {
             if (MigrationsTableExists()) return;
 
-            _db.Sql(_queryConfiguration.CreateTableStatement).AsNonQuery();
+            _db.Execute(_queryConfiguration.CreateTableStatement);
         }
 
         public void ClearAll()
         {
             var statements = (
                 from d in _db.Sql(_queryConfiguration.DropAllObjectsStatement)
-                select (string) d.Statement).ToArray();
+                select (string) d.Statement
+                ).ToArray();
 
             foreach (var statement in statements)
             {
@@ -102,14 +110,20 @@ namespace DbMigrations.Client.Resources
 
         public IList<Migration> GetMigrations()
         {
-            return MigrationsTableExists() 
-                ? _db.Sql(_queryConfiguration.SelectStatement).Select(d => new Migration(d.ScriptName, d.MD5, d.ExecutedOn, d.Content)).ToList() 
-                : new List<Migration>();
+            if (!MigrationsTableExists())
+                return new List<Migration>();
+
+            var migrations = (
+                from d in _db.Sql(_queryConfiguration.SelectStatement)
+                select new Migration(d.ScriptName, d.MD5, d.ExecutedOn, d.Content)
+                ).ToArray();
+
+            return migrations;
         }
 
         public void Insert(Migration item)
         {
-            _db.Sql(_queryConfiguration.InsertStatement).WithParameters(item).AsNonQuery();
+            _db.Execute(_queryConfiguration.InsertStatement, item);
         }
 
         public void ApplyMigration(Migration migration)
