@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Web;
-using System.Web.UI;
 
 namespace DbMigrations.Client.Infrastructure
 {
@@ -12,6 +10,7 @@ namespace DbMigrations.Client.Infrastructure
     {
         // ReSharper disable once InconsistentNaming
         private static readonly MD5 MD5 = MD5.Create();
+
         public static string Checksum(this string input)
         {
             var bytes = Encoding.UTF8.GetBytes(input);
@@ -38,12 +37,14 @@ namespace DbMigrations.Client.Infrastructure
                 lineStart = lineEnd + 1;
             }
         }
+
         public static IEnumerable<string> Parameters(this string s, string escapeChar)
         {
             if (string.IsNullOrEmpty(s)) throw new ArgumentNullException(nameof(s));
             return IterateParameters(s, escapeChar);
         }
-        private static IEnumerable<string> IterateParameters(string s, string escapeChar )
+
+        private static IEnumerable<string> IterateParameters(string s, string escapeChar)
         {
             bool isParameter = false;
             var sb = new StringBuilder();
@@ -58,9 +59,9 @@ namespace DbMigrations.Client.Infrastructure
                     sb.Clear();
                 }
 
-                if (isParameter && sb.Length == 0 && Char.IsLetter(c))
+                if (isParameter && sb.Length == 0 && char.IsLetter(c))
                     sb.Append(c);
-                else if (isParameter && sb.Length > 0 && Char.IsLetterOrDigit(c))
+                else if (isParameter && sb.Length > 0 && char.IsLetterOrDigit(c))
                     sb.Append(c);
                 else if (isParameter)
                 {
@@ -102,14 +103,14 @@ namespace DbMigrations.Client.Infrastructure
                 }
             }
 
-            if (sb.Length > 0) 
+            if (sb.Length > 0)
                 yield return sb.ToString();
         }
 
         public static string ToUpperCaseWithUnderscores(this string text)
         {
             return string.Join("_",
-                    text.Words().Select(s => s.ToUpperInvariant())
+                text.Words().Select(s => s.ToUpperInvariant())
                 );
         }
 
@@ -119,254 +120,206 @@ namespace DbMigrations.Client.Infrastructure
             {
                 throw new ArgumentNullException(nameof(format));
             }
-
-            var context = new NamedFormat();
-            return context.GetResult(format, parameters);
-
+            var sb = new StringBuilder(format.Length*2);
+            foreach (var fragment in format.Fragments())
+            {
+                sb.Append(fragment.ToString(parameters));
+            }
+            return sb.ToString();
         }
-        class NamedFormat
+
+        class Fragment
         {
-            public string GetResult(string format, object source)
+            public static Fragment Literal()
             {
-                var query = from fragments in GetFragments(format)
-                            select fragments.Eval(source);
-
-                var result = new StringBuilder(format.Length * 2);
-                foreach (var s in query)
-                {
-                    result.Append(s);
-                }
-                return result.ToString();
+                return new Fragment((content, ignored) => content);
             }
 
-            private IEnumerable<Fragment> GetFragments(string format)
+            public static Fragment Expression()
             {
-                return new NamedFormatParser().GetFragments(format);
+                return new Fragment((expression, source) => expression.Eval(source));
             }
 
-            class Fragment
+            private Fragment(Func<string, object, string> toString)
             {
-                public static Fragment Literal()
-                {
-                    return new Fragment(new LiteralFormatter());
-                }
-
-                public static Fragment Databinding()
-                {
-                    return new Fragment(new DatabindingFormatter());
-                }
-
-                private Fragment(IFormatter f)
-                {
-                    _formatter = f;
-                }
-
-                readonly StringBuilder _s = new StringBuilder();
-                private readonly IFormatter _formatter;
-
-                public void Append(char c)
-                {
-                    _s.Append(c);
-                }
-                
-                public string Eval(object source)
-                {
-                    return _formatter.Eval(Str, source);
-                }
-
-                private string Str => _s.ToString();
+                _toString = toString;
             }
 
-            class NamedFormatParser
+            private readonly StringBuilder _s = new StringBuilder();
+            private readonly Func<string, object, string> _toString;
+
+            public void Append(char c)
             {
-                private readonly IList<Fragment> _fragments = new List<Fragment>();
-
-                private Fragment CurrentFragment { get; set; }
-
-                private FormatLocation Location { get; set; }
-
-                public IEnumerable<Fragment> GetFragments(string format)
-                {
-                    SwitchToLiteral();
-                    Location = new OutsideExpression(this);
-
-                    foreach (var c in format)
-                    {
-                        Location = Location.Next(c);
-                    }
-
-                    if (!Location.IsValidEndLocation) throw new FormatException();
-
-                    return _fragments;
-                }
-
-
-                void Append(char c)
-                {
-                    CurrentFragment.Append(c);
-                }
-
-                private void NextFragment(Fragment fragment)
-                {
-                    _fragments.Add(fragment);
-                    CurrentFragment = fragment;
-                }
-
-                void SwitchToLiteral()
-                {
-                    NextFragment(Fragment.Literal());
-                }
-
-                void SwitchToExpression()
-                {
-                    NextFragment(Fragment.Databinding());
-                }
-
-                abstract class FormatLocation
-                {
-                    protected NamedFormatParser Parser { get; }
-
-                    protected FormatLocation(NamedFormatParser context)
-                    {
-                        Parser = context;
-                    }
-
-                    public abstract FormatLocation Next(char c);
-
-                    public abstract bool IsValidEndLocation { get; }
-                }
-
-                class OutsideExpression : FormatLocation
-                {
-                    public OutsideExpression(NamedFormatParser context)
-                        : base(context)
-                    {
-                    }
-
-                    public override FormatLocation Next(char c)
-                    {
-                        switch (c)
-                        {
-                            case '{':
-                                return new OnOpenBracket(Parser);
-                            case '}':
-                                return new OnCloseBracket(Parser);
-                            default:
-                                Parser.Append(c);
-                                return this;
-                        }
-                    }
-
-                    public override bool IsValidEndLocation => true;
-                }
-
-                class OnCloseBracket : FormatLocation
-                {
-                    public OnCloseBracket(NamedFormatParser context)
-                        : base(context)
-                    {
-                    }
-
-                    public override FormatLocation Next(char c)
-                    {
-                        switch (c)
-                        {
-                            case '}':
-                                Parser.Append('}');
-                                return new OutsideExpression(Parser);
-                            default:
-                                throw new FormatException();
-                        }
-                    }
-                    public override bool IsValidEndLocation => false;
-                }
-
-                class OnOpenBracket : FormatLocation
-                {
-                    public OnOpenBracket(NamedFormatParser context)
-                        : base(context)
-                    {
-                    }
-
-                    public override FormatLocation Next(char c)
-                    {
-                        switch (c)
-                        {
-                            case '{':
-                                Parser.Append('{');
-                                return new OutsideExpression(Parser);
-                            default:
-                                Parser.SwitchToExpression();
-                                Parser.Append(c);
-                                return new InsideExpression(Parser);
-                        }
-
-                    }
-                    public override bool IsValidEndLocation => false;
-                }
-
-                class InsideExpression : FormatLocation
-                {
-                    public InsideExpression(NamedFormatParser context)
-                        : base(context)
-                    {
-                    }
-
-                    public override FormatLocation Next(char c)
-                    {
-                        switch (c)
-                        {
-                            case '}':
-                                Parser.SwitchToLiteral();
-                                return new OutsideExpression(Parser);
-                            default:
-                                Parser.Append(c);
-                                return this;
-                        }
-                    }
-                    public override bool IsValidEndLocation => false;
-                }
-
+                _s.Append(c);
             }
-            interface IFormatter
+
+            public string ToString(object source)
             {
-                string Eval(string format, object source);
+                return _toString(_s.ToString(), source);
             }
-            class LiteralFormatter : IFormatter
+
+            public override string ToString()
             {
-                public string Eval(string format, object source)
+                return _s.ToString();
+            }
+        }
+
+        static IEnumerable<Fragment> Fragments(this string s)
+        {
+            return new FragmentIterator().GetFragments(s);
+        }
+
+        class FragmentIterator
+        {
+            private readonly Queue<Fragment> _fragments = new Queue<Fragment>();
+            private Fragment _currentFragment;
+
+            enum Location
+            {
+                OutsideExpression,
+                InsideExpression,
+                OnCloseBracket,
+                OnOpenBracket
+            }
+
+            public IEnumerable<Fragment> GetFragments(string format)
+            {
+                NextFragment(Fragment.Literal());
+
+                var l = Location.OutsideExpression;
+
+                foreach (var c in format)
                 {
-                    return format;
+                    switch (l)
+                    {
+                        case Location.OutsideExpression:
+                            l = OnOutsideExpression(l, c);
+                            break;
+                        case Location.InsideExpression:
+                            l = OnInsideExpression(l, c);
+                            break;
+                        case Location.OnCloseBracket:
+                            l = OnCloseBracket(l, c);
+                            break;
+                        case Location.OnOpenBracket:
+                            l = OnOpenBracket(l, c);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    while (_fragments.Any())
+                    {
+                        yield return _fragments.Dequeue();
+                    }
+
+                }
+
+                if (l != Location.OutsideExpression)
+                    throw new FormatException();
+
+                if (_currentFragment != null)
+                    yield return _currentFragment;
+            }
+
+            private Location OnOpenBracket(Location l, char c)
+            {
+                if (l != Location.OnOpenBracket)
+                    throw new ArgumentException("l");
+                switch (c)
+                {
+                    case '{':
+                        _currentFragment.Append('{');
+                        return Location.OutsideExpression;
+                    default:
+                        NextFragment(Fragment.Expression());
+                        _currentFragment.Append(c);
+                        return Location.InsideExpression;
                 }
             }
-            class DatabindingFormatter : IFormatter
+
+            private Location OnCloseBracket(Location l, char c)
             {
-                public string Eval(string s, object source)
+                if (l != Location.OnCloseBracket)
+                    throw new ArgumentException("l");
+                switch (c)
                 {
-                    var expression = s;
-                    var format = "";
-
-                    var colonIndex = expression.IndexOf(':');
-                    if (colonIndex > 0)
-                    {
-                        format = expression.Substring(colonIndex + 1);
-                        expression = expression.Substring(0, colonIndex);
-                    }
-
-                    try
-                    {
-                        if (string.IsNullOrEmpty(format))
-                        {
-                            return (DataBinder.Eval(source, expression) ?? "").ToString();
-                        }
-                        return DataBinder.Eval(source, expression, "{0:" + format + "}");
-                    }
-                    catch (HttpException ex)
-                    {
-                        throw new FormatException(ex.Message);
-                    }
+                    case '}':
+                        _currentFragment.Append('}');
+                        return Location.OutsideExpression;
+                    default:
+                        throw new FormatException();
                 }
             }
+
+            private Location OnInsideExpression(Location l, char c)
+            {
+                if (l != Location.InsideExpression)
+                    throw new ArgumentException("l");
+                switch (c)
+                {
+                    case '}':
+                        NextFragment(Fragment.Literal());
+                        return Location.OutsideExpression;
+                    default:
+                        _currentFragment.Append(c);
+                        return l;
+                }
+            }
+
+            private Location OnOutsideExpression(Location l, char c)
+            {
+                if (l != Location.OutsideExpression)
+                    throw new ArgumentException("l");
+                switch (c)
+                {
+                    case '{':
+                        return Location.OnOpenBracket;
+                    case '}':
+                        return Location.OnCloseBracket;
+                    default:
+                        _currentFragment.Append(c);
+                        return l;
+                }
+            }
+
+
+            private void NextFragment(Fragment fragment)
+            {
+                if (_currentFragment != null)
+                    _fragments.Enqueue(_currentFragment);
+                _currentFragment = fragment;
+            }
+        }
+
+        private static string Eval(this string expression, object source)
+        {
+            var colonIndex = expression.IndexOf(':');
+            if (colonIndex > 0)
+            {
+                var format = "{0:" + expression.Substring(colonIndex + 1) + "}";
+                expression = expression.Substring(0, colonIndex);
+                var value = GetPropertyValue(source, expression);
+                return string.Format(format, value);
+            }
+            else
+            {
+                var value = GetPropertyValue(source, expression);
+                if (value == null) return string.Empty;
+                return value.ToString();
+            }
+        }
+
+        private static object GetPropertyValue(object source, string propName)
+        {
+            var type = source.GetType();
+            var propertyInfo = type.GetProperty(propName);
+            if (propertyInfo == null)
+            {
+                throw new FormatException($"Property {type.Name}.{propName} not found");
+            }
+            var value = propertyInfo.GetValue(source);
+            return value;
         }
     }
 }
