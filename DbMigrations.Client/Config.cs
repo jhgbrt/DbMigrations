@@ -9,7 +9,7 @@ using DbMigrations.Client.Infrastructure;
 
 namespace DbMigrations.Client
 {
-    class Config
+    public class Config
     {
         private string _server;
         private string _user;
@@ -25,7 +25,8 @@ namespace DbMigrations.Client
             _optionSet = new OptionSet
             {
                 {
-                    "server=", "The db server. For SQL Server, this is a string of the form " +
+                    "server=", "The db server (\"Data Source\" part of the connection string. " +
+                               "For SQL Server, this is a string of the form " +
                                "'servername\\instance' (e.g. localhost\\sqlexpress), or just " +
                                "'servername' in case there's just a default instance). " +
                                "For Oracle, you can use either a " +
@@ -85,9 +86,24 @@ namespace DbMigrations.Client
                 },
                 {
                     "persistConfiguration", "Persist the configuration to the config file", s => PersistConfiguration = true
+                },
+                {
+                    "pre=", "Comma-separated list of subfolders containing scripts to execute before migration (default none). " +
+                            "It is highly recommended to only include generic (idem-potent) scripts in this folder. If you don't " +
+                            "know what that means, don't use this feature.", s => PreMigration = s.Split(',')
+                },
+                {
+                    "post=", "Comma-separated list of subfolders containing scripts to execute after migration. " +
+                             "If not specified, all scripts except the migrations are considered post-migration " +
+                             "scripts. Can be useful e.g. if certain folders are to be ignored in certain " +
+                             "environments.", s => PostMigration = s.Split(',')
                 }
             };
         }
+
+        public string[] PostMigration { get; set; }
+
+        public string[] PreMigration { get; set; }
 
         public bool ReInit { get; private set; }
 

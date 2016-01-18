@@ -41,12 +41,18 @@ For added convenience, the tool also supports running additional sql
 scripts, in addition to the migration scripts themselfves.
 
 
-After the migrations have been run, *all* scripts in *all* other
+After the migrations have been run, by default *all* scripts in *all* other
 subfolders are executed. These scripts can be data loads, updates of
 views or stored procedures, etc. The only limitation is that these
 scripts should be **idempotent** at all times, and consistent with the
 current state of the database as it is represented by the set of
 migrations.
+
+It is possible fine-tune this behaviour and have a pre-migration phase as well, using the
+-pre and -post switches, where you specify a comma-seperated list of folders that must
+be executed before resp. after the migrations. It is *highly* recommended to only
+include 'generic', idem-potent scripts in the pre-migration phase, otherwise this folder
+will very quickly become a source of severe headaches.
 
 ##Example
 

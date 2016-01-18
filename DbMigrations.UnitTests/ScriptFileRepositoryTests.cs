@@ -1,7 +1,9 @@
+using System.Configuration.Internal;
 using System.IO;
 using System.Linq;
 using DbMigrations.Client.Resources;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NSubstitute;
 
 namespace DbMigrations.UnitTests
 {
@@ -12,7 +14,7 @@ namespace DbMigrations.UnitTests
         [TestMethod]
         public void GetMigrationScripts_ReturnsMigrations()
         {
-            var repo = new ScriptFileRepository(new DirectoryInfo(".\\Scripts\\UnitTests"));
+            var repo = new ScriptFileRepository(new DirectoryInfo(".\\Scripts\\UnitTests"), null, null);
 
             var migrations = repo.GetScripts(ScriptKind.Migration).Select(s => s.ScriptName).ToArray();
 
@@ -41,7 +43,7 @@ namespace DbMigrations.UnitTests
         {
             var repo = new ScriptFileRepository(new DirectoryInfo(".\\Scripts\\UnitTests"));
 
-            var scripts = repo.GetScripts(ScriptKind.Other).Select(s => new{FolderName = s.Collection, s.ScriptName}).ToArray();
+            var scripts = repo.GetScripts(ScriptKind.PostMigration).Select(s => new{FolderName = s.Collection, s.ScriptName}).ToArray();
 
             var expected = new[] { @"01\001.sql", @"01\002.sql", @"02\001.sql", @"02\002.sql", @"02\003.sql" }.Select(s => new{FolderName = "DataLoads", ScriptName = s}).ToArray();
 

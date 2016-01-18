@@ -51,7 +51,7 @@ namespace DbMigrations.IntegrationTests
             var connectionString = target.ConnectionString;
             var masterConnectionString = target.MasterConnectionString;
             var providerName = target.ProviderName;
-           var args = target.Arguments.Concat(new[] {$"--directory={migrations}"} ).ToArray();
+            var args = target.Arguments.Concat(new[] {$"--directory={migrations}"}).ToArray();
 
             Console.WriteLine("CONNECTING");
             using (var db = new Db(masterConnectionString, providerName))
@@ -105,7 +105,7 @@ namespace DbMigrations.IntegrationTests
 
             Console.WriteLine("==== REINITIALIZE MIGRATIONS ====");
 
-            args = args.Concat(new[] {"--reinitialize", "--force"}).ToArray();
+            args = args.Concat(new[] {"--reinitialize", "--force", "--pre=Pre"}).ToArray();
 
             result = Program.Main(args);
 

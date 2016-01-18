@@ -192,9 +192,15 @@ namespace DbMigrations.Client.Application
             return true;
         }
 
-        public bool ExecuteScripts(bool whatif)
+        public bool HasScripts(ScriptKind kind)
         {
-            var scripts = _scriptFileRepository.GetScripts(ScriptKind.Other);
+            var scripts = _scriptFileRepository.GetScripts(kind);
+            return scripts.Any();
+        }
+
+        public bool ExecuteScripts(bool whatif, ScriptKind kind)
+        {
+            var scripts = _scriptFileRepository.GetScripts(kind);
 
             var maxFolderNameLength = scripts.Select(s => s.Collection.Length).DefaultIfEmpty().Max();
             var maxFileNameLength = scripts.Select(s => s.ScriptName.Length).DefaultIfEmpty().Max();

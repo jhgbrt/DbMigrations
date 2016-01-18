@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using static System.Console;
 using static System.ConsoleColor;
 
@@ -38,6 +39,14 @@ namespace DbMigrations.Client.Infrastructure
         {
             WriteLine();
             return this;
+        }
+
+        public Logger Section(string message)
+        {
+            return Line()
+                .InfoLine(message)
+                .InfoLine(new string(Enumerable.Repeat('=', message.Length).ToArray()))
+                .Line();
         }
     }
 }

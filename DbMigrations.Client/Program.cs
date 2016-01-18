@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Configuration;
 using System.IO;
+using System.Linq;
 using System.Text;
 using DbMigrations.Client.Application;
 using DbMigrations.Client.Configuration;
@@ -59,32 +60,24 @@ namespace DbMigrations.Client
 
                     Logger.Info("Connecting to the database... ");
                     db.Connect();
+                    Logger.OkLine();
 
-                    Logger
-                        .OkLine()
-                        .Line()
-                        .InfoLine("Performing database migrations")
-                        .InfoLine("==============================")
-                        .Line();
+                    Func<IMigrationManager, Config, bool>[] workflow = 
+                    {
+                        (m,c) => PreMigration(m, c),
+                        (m,c) => Migration(m, c),
+                        (m,c) => PostMigration(m, c)
+                    };
 
-                    if (!manager.MigrateSchema(config.WhatIf, config.ReInit))
+                    var result = workflow.All(action => action(manager, config));
+                    
+                    if (!result)
                     {
                         Logger.InfoLine("Errors occurred. Use --help for for documentation.");
                         return 1;
                     }
 
-                    Logger
-                        .Line()
-                        .InfoLine("Running additional scripts")
-                        .InfoLine("==========================")
-                        .Line();
-
-                    if (!manager.ExecuteScripts(config.WhatIf))
-                    {
-                        Logger.InfoLine("Errors occurred. Use --help for for documentation.");
-                        return 1;
-                    }
-
+                    
                     Logger
                         .Line()
                         .InfoLine("Migrations were successfully run");
@@ -96,6 +89,26 @@ namespace DbMigrations.Client
                 }
                 return 0;
             }
+        }
+
+        private static bool PreMigration(IMigrationManager manager, Config config)
+        {
+            if (!manager.HasScripts(ScriptKind.PreMigration)) return true;
+            Logger.Section("Running pre-migration scripts");
+            return manager.ExecuteScripts(config.WhatIf, ScriptKind.PreMigration);
+        }
+
+        private static bool Migration(IMigrationManager manager, Config config)
+        {
+            Logger.Section("Performing database migrations");
+            return manager.MigrateSchema(config.WhatIf, config.ReInit);
+        }
+
+        private static bool PostMigration(IMigrationManager manager, Config config)
+        {
+            if (!manager.HasScripts(ScriptKind.PostMigration)) return true;
+            Logger.Section("Running post-migration scripts");
+            return manager.ExecuteScripts(config.WhatIf, ScriptKind.PostMigration);
         }
 
         private static void SaveConfiguration(DbSpecifics dbSpecifics)
@@ -115,7 +128,7 @@ namespace DbMigrations.Client
         {
             var database = new Database(db, queryConfig);
             var folder = new DirectoryInfo(config.Directory);
-            var scripts = new ScriptFileRepository(folder);
+            var scripts = new ScriptFileRepository(folder, config.PreMigration, config.PostMigration);
             var manager = new MigrationManager(scripts, database, Logger);
             return manager;
         }
