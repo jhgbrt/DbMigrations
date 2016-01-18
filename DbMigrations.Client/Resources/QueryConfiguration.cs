@@ -106,7 +106,7 @@ namespace DbMigrations.Client.Resources
             public static QueryConfiguration Instance(Config config)
             {
                 var schema = config.Schema ?? config.UserName;
-                var tableName = $"{schema}.Migrations";
+                var tableName = $"{schema}.MIGRATIONS";
                 return new QueryConfiguration("Oracle.ManagedDataAccess.Client", ":", tableName, schema, string.Empty, CreateTableTemplate,
                     CountMigrationTablesStatement, DropAllObjectsStatement);
             }
