@@ -17,6 +17,7 @@
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>9224f244</NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -51,7 +52,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Application\IMigrationManager.cs" />
-    <Compile Include="Configuration\DbMigrationsConfiguration.cs" />
+    <Compile Include="Configuration\DbMigrationsConfigurationSection.cs" />
+    <Compile Include="Configuration\QueryConfigurationElement.cs" />
     <Compile Include="Resources\Database.cs" />
     <Compile Include="Infrastructure\Db.cs" />
     <Compile Include="Infrastructure\DiffMatchPatch.cs" />
@@ -67,7 +69,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Model\Script.cs" />
-    <Compile Include="Resources\QueryConfiguration.cs" />
+    <Compile Include="Resources\DbSpecifics.cs" />
     <Compile Include="Resources\ScriptFileRepository.cs" />
     <Compile Include="Resources\ScriptKind.cs" />
     <Compile Include="Infrastructure\StringExtensions.cs" />
