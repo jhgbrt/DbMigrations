@@ -20,7 +20,6 @@ namespace DbMigrations.IntegrationTests
             string connectionString = $@"Data Source={server};";
             var args = new[]
             {
-                $@"--directory={@".\Scripts\SQLite"}",
                 $@"--server={server}",
                 $@"--database={database}",
                 $@"--providerName={providerName}"
@@ -46,7 +45,6 @@ namespace DbMigrations.IntegrationTests
             string connectionString = $@"Data Source={server};Initial Catalog={database};Integrated Security=True";
             var args = new[]
             {
-                $@"--directory={@".\Scripts\SqlServer"}",
                 $@"--server={server}",
                 $@"--database={database}"
             };
@@ -109,7 +107,6 @@ namespace DbMigrations.IntegrationTests
 
             var args = new[]
             {
-                $@"--directory={migrationFolder}",
                 $@"--connectionString={connectionString}",
                 $@"--providerName={providerName}"
             };
@@ -143,6 +140,7 @@ namespace DbMigrations.IntegrationTests
         public string[] Arguments { get; }
 
         public string DropRecreate { get; }
+
         public string Name { get;  }
     }
 }
