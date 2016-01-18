@@ -36,6 +36,13 @@ namespace DbMigrations.IntegrationTests
         {
             DbProviderFactories.GetFactory("System.Data.SqlClient");
             RunTest(On.SqlServer());
+        }   
+        
+        [TestMethod]
+        public void RunSqlServerCeTest()
+        {
+            DbProviderFactories.GetFactory("System.Data.SqlServerCe.4.0");
+            RunTest(On.SqlServerCe());
         }
 
         private void RunTest(On target)
@@ -79,7 +86,7 @@ namespace DbMigrations.IntegrationTests
 
             }
 
-            File.WriteAllText($@"{migrations}\Migrations\003.sql", "CREATE TABLE Orders (Id int not null, Description char(20) not null)");
+            File.WriteAllText($@"{migrations}\Migrations\003.sql", "CREATE TABLE Orders (Id int not null, Description int not null)");
 
             Console.WriteLine("==== ADDED MIGRATION, EXECUTE MIGRATIONS ====");
 
@@ -88,7 +95,7 @@ namespace DbMigrations.IntegrationTests
             Assert.AreEqual(0, result);
 
             File.WriteAllText($@"{migrations}\Migrations\003.sql", "--MODIFIED\r\n" +
-                                                                   "CREATE TABLE Orders (Id int not null, Description char(15) not null)");
+                                                                   "CREATE TABLE Orders (Id int not null, Description2 int not null)");
 
             Console.WriteLine("==== MODIFIED MIGRATION, EXECUTE MIGRATIONS ====");
 

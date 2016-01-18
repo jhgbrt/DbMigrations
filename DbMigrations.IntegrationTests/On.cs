@@ -1,4 +1,6 @@
 using System;
+using System.Data.SqlServerCe;
+using System.IO;
 
 namespace DbMigrations.IntegrationTests
 {
@@ -38,7 +40,7 @@ namespace DbMigrations.IntegrationTests
                                    "end\r\n" +
                                    "create database {0}\r\n";
 
-            var server = @"localhost";
+            var server = @"localhost\sqlexpress";
             var database = "MIGRATIONTEST";
             var masterConnectionString = $@"Data Source={server};Initial Catalog=master;Integrated Security=True";
             string connectionString = $@"Data Source={server};Initial Catalog={database};Integrated Security=True";
@@ -89,12 +91,37 @@ namespace DbMigrations.IntegrationTests
             return new On("Oracle", server, database, @".\Scripts\Oracle", "Oracle.ManagedDataAccess.Client", masterConnectionString, connectionString, initSqlStatement, args);
         }
 
+        public static On SqlServerCe()
+        {
+            var assembly = typeof (System.Data.SqlServerCe.SqlCeConnection).Assembly;
+            Console.WriteLine(assembly.ToString());
+            var initSqlStatement = "SELECT 1 AS Result"; // a database is always created from scratch (since mstest always executes in a new folder)
+
+            var providerName = "System.Data.SqlServerCe.4.0";
+            var server = Path.GetFullPath(@"db.sdf");
+            var database = "MIGRATIONTEST";
+            var masterConnectionString = $@"Data Source={server};";
+            string connectionString = $@"Data Source={server};";
+            var migrationFolder = @".\Scripts\SqlServerCe";
+
+            SqlCeEngine en = new SqlCeEngine(masterConnectionString);
+            en.CreateDatabase();
+
+            var args = new[]
+            {
+                $@"--directory={migrationFolder}",
+                $@"--connectionString={connectionString}",
+                $@"--providerName={providerName}"
+            };
+
+            return new On("SqlServerCe", server, database, migrationFolder, providerName, masterConnectionString, connectionString, initSqlStatement, args);
+        }
+
 
         private On(string name, string server, string database, string migrationFolder, string providerName, string masterConnectionString, string connectionString, string initSql, string[] args)
         {
             Name = name;
             Server = server;
-            Database = database;
             MigrationFolder = migrationFolder;
             ProviderName = providerName;
             MasterConnectionString = masterConnectionString;
@@ -104,8 +131,6 @@ namespace DbMigrations.IntegrationTests
         }
 
         public string Server { get; }
-
-        public string Database { get; }
 
         public string MigrationFolder { get; }
 

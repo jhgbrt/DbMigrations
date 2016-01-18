@@ -20,6 +20,10 @@ namespace DbMigrations.Client.Resources
             {
                 return SqLite.Instance();
             }
+            if (config.ProviderName.Contains("SqlServerCe"))
+            {
+                return SqlServerCe.Instance();
+            }
 
             return SqlServer.Instance(config);
         }
@@ -47,10 +51,10 @@ namespace DbMigrations.Client.Resources
             {
                 var schema = config.Schema ?? "dbo";
                 var tableName = $"{schema}.Migrations";
-                return new QueryConfiguration("System.Data.SqlClient", "@", tableName, schema, 
-                    "SET XACT_ABORT ON", 
+                return new QueryConfiguration("System.Data.SqlClient", "@", tableName, schema,
+                    "SET XACT_ABORT ON",
                     CreateTableTemplate,
-                    CountMigrationTablesStatement, 
+                    CountMigrationTablesStatement,
                     DropAllObjectsStatement);
             }
 
@@ -160,13 +164,47 @@ namespace DbMigrations.Client.Resources
                   "      Content nvarchar NOT NULL\r\n" +
                   "  )";
 
-            private static string DropAllObjectsStatement 
+            private static string DropAllObjectsStatement
                 = "SELECT 'DROP TABLE ' || name || ';' AS \"Statement\" \r\n" +
                   "FROM SQLITE_MASTER \r\n" +
                   "WHERE TYPE = 'table';";
         }
 
-        private QueryConfiguration(string invariantName, string escapeCharacter, string tableName, string schema, string configureTransactionStatement, string createTableTemplate, string countMigrationTablesStatement, string dropAllObjectsStatement)
+
+        private static class SqlServerCe
+        {
+            public static QueryConfiguration Instance()
+            {
+                return new QueryConfiguration(
+                    "System.Data.SqlServerCe.4.0",
+                    "@", "Migrations", string.Empty, string.Empty
+                    , CreateTableTemplate
+                    , CountMigrationTablesStatement
+                    , DropAllObjectsStatement);
+            }
+
+            private static string CountMigrationTablesStatement
+                = "SELECT COUNT(*) \r\n" +
+                  "FROM INFORMATION_SCHEMA.TABLES \r\n" +
+                  "WHERE TABLE_NAME = @TableName";
+
+            private static string CreateTableTemplate
+                = "CREATE TABLE {TableName} (\r\n" +
+                  "      ScriptName nvarchar(255) NOT NULL PRIMARY KEY, \r\n" +
+                  "      MD5 nvarchar(32) NOT NULL, \r\n" +
+                  "      ExecutedOn datetime NOT NULL,\r\n" +
+                  "      Content ntext NOT NULL\r\n" +
+                  "  )";
+
+            private static string DropAllObjectsStatement
+                = "-- tables\r\n" +
+                  "SELECT \'DROP TABLE [\' + table_name + \']\' as Statement \r\n" +
+                  "FROM information_schema.tables";
+        }
+
+        private QueryConfiguration(string invariantName, string escapeCharacter, string tableName, string schema,
+            string configureTransactionStatement, string createTableTemplate, string countMigrationTablesStatement,
+            string dropAllObjectsStatement)
         {
             InvariantName = invariantName;
             EscapeCharacter = escapeCharacter;
