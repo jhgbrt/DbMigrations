@@ -226,61 +226,60 @@ namespace DbMigrations.Client.Infrastructure
             {
                 if (l != Location.OnOpenBracket)
                     throw new ArgumentException("l");
-                switch (c)
+                if (c == '{')
                 {
-                    case '{':
-                        _currentFragment.Append('{');
-                        return Location.OutsideExpression;
-                    default:
-                        NextFragment(Fragment.Expression());
-                        _currentFragment.Append(c);
-                        return Location.InsideExpression;
+                    _currentFragment.Append('{');
+                    return Location.OutsideExpression;
                 }
+                NextFragment(Fragment.Expression());
+                _currentFragment.Append(c);
+                return Location.InsideExpression;
             }
 
             private Location OnCloseBracket(Location l, char c)
             {
                 if (l != Location.OnCloseBracket)
                     throw new ArgumentException("l");
-                switch (c)
+                
+                if (c == '}')
                 {
-                    case '}':
-                        _currentFragment.Append('}');
-                        return Location.OutsideExpression;
-                    default:
-                        throw new FormatException();
+                    _currentFragment.Append('}');
+                    return Location.OutsideExpression;
                 }
+                
+                throw new FormatException();
             }
 
             private Location OnInsideExpression(Location l, char c)
             {
                 if (l != Location.InsideExpression)
                     throw new ArgumentException("l");
-                switch (c)
+
+                if (c == '}')
                 {
-                    case '}':
-                        NextFragment(Fragment.Literal());
-                        return Location.OutsideExpression;
-                    default:
-                        _currentFragment.Append(c);
-                        return l;
+                    NextFragment(Fragment.Literal());
+                    return Location.OutsideExpression;
                 }
+                
+                _currentFragment.Append(c);
+                return l;
             }
 
             private Location OnOutsideExpression(Location l, char c)
             {
                 if (l != Location.OutsideExpression)
                     throw new ArgumentException("l");
-                switch (c)
+                
+                if (c == '{')
                 {
-                    case '{':
-                        return Location.OnOpenBracket;
-                    case '}':
-                        return Location.OnCloseBracket;
-                    default:
-                        _currentFragment.Append(c);
-                        return l;
+                    return Location.OnOpenBracket;
                 }
+                if (c == '}')
+                {
+                    return Location.OnCloseBracket;
+                }
+                _currentFragment.Append(c);
+                return l;
             }
 
 
