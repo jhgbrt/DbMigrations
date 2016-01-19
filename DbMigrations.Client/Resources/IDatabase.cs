@@ -10,5 +10,6 @@ namespace DbMigrations.Client.Resources
         void ClearAll();
         IList<Migration> GetMigrations();
         void ApplyMigration(Migration migration);
+        void Insert(Migration migration);
     }
 }

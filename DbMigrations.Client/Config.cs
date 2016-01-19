@@ -110,9 +110,14 @@ namespace DbMigrations.Client
                              "scripts. Can be useful e.g. if certain folders are to be ignored in certain " +
                              "environments.",
                     s => PostMigration = s.Split(',')
+                },
+                {
+                    "sync", "Synchronize the database with the migration folder", s => Sync = true
                 }
             };
         }
+
+        public bool Sync { get; private set; }
 
         public string[] PostMigration { get; set; }
 
@@ -131,9 +136,6 @@ namespace DbMigrations.Client
 
         public bool IsValid(StringBuilder errors)
         {
-            if (PersistConfiguration)
-                return true;
-
             if (string.IsNullOrEmpty(_directory))
                 errors.AppendLine("No folder");
             else if (!System.IO.Directory.Exists(_directory))

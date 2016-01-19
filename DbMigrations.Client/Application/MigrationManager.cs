@@ -64,7 +64,7 @@ namespace DbMigrations.Client.Application
             Logger = logger;
         }
 
-        public bool MigrateSchema(bool whatif, bool reInit = false)
+        public bool MigrateSchema(bool whatif, bool syncOnly = false, bool reInit = false)
         {
             if (reInit)
             {
@@ -82,7 +82,7 @@ namespace DbMigrations.Client.Application
                 return true;
             }
             
-            var ok = ApplyMigrations(whatif, migrations);
+            var ok = ApplyMigrations(whatif, syncOnly, migrations);
 
             if (!ok)
             {
@@ -150,7 +150,7 @@ namespace DbMigrations.Client.Application
             return result;
         }
 
-        private bool ApplyMigrations(bool whatif, IList<MigrationScript> migrations)
+        private bool ApplyMigrations(bool whatif, bool syncOnly, IList<MigrationScript> migrations)
         {
             var maxFileNameLength = migrations.Select(s => s.Name.Length).Max();
 
@@ -164,21 +164,8 @@ namespace DbMigrations.Client.Application
                 }
                 else if (migration.IsNewMigration)
                 {
-                    var script = migration.Script;
-                    Logger.Info($"{migration.Name} - applying... ".PadRight(maxFileNameLength + 4));
                     if (!whatif)
-                    {
-                        try
-                        {
-                            _database.ApplyMigration(new Migration(script.ScriptName, script.Checksum, DateTime.UtcNow, script.Content));
-                            Logger.Ok();
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.Error("ERROR: " + e.Message);
-                            result = false;
-                        }
-                    }
+                        result = Apply(migration.Script, syncOnly, maxFileNameLength + 4);
                 }
                 else
                 {
@@ -188,6 +175,31 @@ namespace DbMigrations.Client.Application
                 Logger.Line();
                 if (!result)
                     return false;
+            }
+            return true;
+        }
+
+        private bool Apply(Script script, bool syncOnly, int padding)
+        {
+            try
+            {
+                var migrationRecord = new Migration(script.ScriptName, script.Checksum, DateTime.UtcNow, script.Content);
+                if (!syncOnly)
+                {
+                    Logger.Info($"{script.ScriptName} - applying... ".PadRight(padding));
+                    _database.ApplyMigration(migrationRecord);
+                }
+                else
+                {
+                    Logger.Info($"{script.ScriptName} - inserting... ".PadRight(padding));
+                    _database.Insert(migrationRecord);
+                }
+                Logger.Ok();
+            }
+            catch (Exception e)
+            {
+                Logger.Error("ERROR: " + e.Message);
+                return false;
             }
             return true;
         }

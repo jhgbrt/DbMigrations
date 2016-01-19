@@ -4,7 +4,7 @@ namespace DbMigrations.Client.Application
 {
     internal interface IMigrationManager
     {
-        bool MigrateSchema(bool whatif, bool reInit);
+        bool MigrateSchema(bool whatif, bool syncOnly, bool reInit);
         bool ExecuteScripts(bool whatIf, ScriptKind kind);
         bool HasScripts(ScriptKind kind);
     }

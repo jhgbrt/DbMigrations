@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using DbMigrations.Client;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.VisualStudio.TestTools.UnitTesting.Web;
 using Net.Code.ADONet;
 
 namespace DbMigrations.IntegrationTests
@@ -14,34 +15,31 @@ namespace DbMigrations.IntegrationTests
     [DeploymentItem("x64", "x64")]
     [DeploymentItem("x86", "x86")]
     [DeploymentItem("Oracle.ManagedDataAccess.dll")]
+    [DeploymentItem("System.Data.SQLite.dll")]
     public class IntegrationTests
     {
 
         [TestMethod]
         public void RunOracleTest()
         {
-            DbProviderFactories.GetFactory("Oracle.ManagedDataAccess.Client");
             RunTest(On.Oracle());
         }
 
         [TestMethod]
         public void RunSQLiteTest()
         {
-            DbProviderFactories.GetFactory("System.Data.SQLite");
             RunTest(On.SqLite());
         }
 
         [TestMethod]
         public void RunSqlServerTest()
         {
-            DbProviderFactories.GetFactory("System.Data.SqlClient");
             RunTest(On.SqlServer());
         }   
         
         [TestMethod]
         public void RunSqlServerCeTest()
         {
-            DbProviderFactories.GetFactory("System.Data.SqlServerCe.4.0");
             RunTest(On.SqlServerCe());
         }
 
@@ -75,7 +73,7 @@ namespace DbMigrations.IntegrationTests
             Console.WriteLine("==== EXECUTE MIGRATIONS ====");
             var result = Program.Main(args);
 
-            Assert.AreEqual(0, result);
+            Assert.AreEqual(0, result, "Error while applying initial migrations");
 
             using (var db = new Db(connectionString, providerName))
             {
@@ -92,7 +90,7 @@ namespace DbMigrations.IntegrationTests
 
             result = Program.Main(args);
 
-            Assert.AreEqual(0, result);
+            Assert.AreEqual(0, result, "Error while applying migrations after adding a new migration");
 
             File.WriteAllText($@"{migrations}\Migrations\003.sql", "--MODIFIED\r\n" +
                                                                    "CREATE TABLE Orders (Id int not null, Description2 int not null)");
@@ -101,15 +99,28 @@ namespace DbMigrations.IntegrationTests
 
             result = Program.Main(args);
 
-            Assert.AreEqual(1, result);
+            Assert.AreEqual(1, result, "Expected an error when trying to execute migrations when when file is modified.");
 
             Console.WriteLine("==== REINITIALIZE MIGRATIONS ====");
 
-            args = args.Concat(new[] {"--reinitialize", "--force", "--pre=Pre"}).ToArray();
+            result = Program.Main(args.Concat(new[] {"--reinitialize", "--force", "--pre=Pre"}).ToArray());
 
-            result = Program.Main(args);
+            Assert.AreEqual(0, result, "Error while re-initializing migrations");
+            
+            File.WriteAllText($@"{migrations}\Migrations\004.sql", "THIS SCRIPT IS NOT ACTUALLY EXECUTED");
 
-            Assert.AreEqual(0, result);
+            Console.WriteLine("==== ADDED MIGRATION, SYNC WITHOUT APPLY ====");
+
+            result = Program.Main(args.Concat(new[] {"--sync", "--force" }).ToArray());
+
+            Assert.AreEqual(0, result, "Error while synchronizing the database with existing migrations");
+            
+            using (var db = new Db(connectionString, providerName))
+            {
+                var count = db.Sql("SELECT COUNT(*) FROM Migrations").AsScalar<int>();
+                Assert.AreEqual(4, count);
+            }
+
         }
     }
 
