@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -281,8 +282,7 @@ namespace DbMigrations.Client.Infrastructure
                 _currentFragment.Append(c);
                 return l;
             }
-
-
+            
             private void NextFragment(Fragment fragment)
             {
                 if (_currentFragment != null)
@@ -291,34 +291,42 @@ namespace DbMigrations.Client.Infrastructure
             }
         }
 
-        private static string Eval(this string expression, object source)
+        public static string Eval(this string expression, object obj)
         {
             var colonIndex = expression.IndexOf(':');
             if (colonIndex > 0)
             {
                 var format = "{0:" + expression.Substring(colonIndex + 1) + "}";
                 expression = expression.Substring(0, colonIndex);
-                var value = GetPropertyValue(source, expression);
+                var value = Evaluate(expression, obj);
                 return string.Format(format, value);
             }
             else
             {
-                var value = GetPropertyValue(source, expression);
+                var value = Evaluate(expression, obj);
                 if (value == null) return string.Empty;
                 return value.ToString();
             }
         }
 
-        private static object GetPropertyValue(object source, string propName)
+        private static object Evaluate(string expression, object target)
         {
-            var type = source.GetType();
-            var propertyInfo = type.GetProperty(propName);
-            if (propertyInfo == null)
+            var targetType = target.GetType();
+            Delegate d;
+            var key = new {targetType, expression};
+            if (!Delegates.TryGetValue(key, out d))
             {
-                throw new FormatException($"Property {type.Name}.{propName} not found");
+                ParameterExpression[] parameters = { Expression.Parameter(targetType, "") };
+                var parser = new ExpressionParser(parameters, expression, null);
+                var body = parser.Parse(typeof (object));
+                var lambda = Expression.Lambda(body, parameters);
+                d = lambda.Compile();
+                Delegates[key] = d;
             }
-            var value = propertyInfo.GetValue(source);
+            var value = d.DynamicInvoke(target);
             return value;
         }
+
+        static readonly IDictionary<object, Delegate> Delegates = new Dictionary<object, Delegate>();
     }
 }

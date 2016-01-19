@@ -67,7 +67,5 @@ namespace DbMigrations.Client.Configuration
             get { return this[configureTransaction] as QueryConfigurationElement; }
             set { this[configureTransaction] = value; }
         }
-
-        public string ToQuery(QueryConfigurationElement q) => q.Sql ?? string.Empty;
     }
 }

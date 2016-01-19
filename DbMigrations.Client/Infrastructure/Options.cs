@@ -144,7 +144,7 @@ using NDesk.Options;
 #if NDESK_OPTIONS
 namespace NDesk.Options
 #else
-namespace DbMigrations.Client.Infrastructure
+namespace Mono.Options
 #endif
 {
     public class OptionValueCollection : IList, IList<string>

@@ -13,16 +13,16 @@ namespace DbMigrations.Client.Model
             Content = content;
         }
 
-        public DateTime ExecutedOn { get; set; }
+        public DateTime ExecutedOn { get; }
 
         [StringLength(255)]
-        public string Content { get; private set; }
+        public string Content { get; }
 
         [StringLength(int.MaxValue)]
-        public string ScriptName { get; private set; }
+        public string ScriptName { get; }
 
         [StringLength(32)]
-        public string MD5 { get; private set; }
+        public string MD5 { get; }
 
         public override string ToString()
         {

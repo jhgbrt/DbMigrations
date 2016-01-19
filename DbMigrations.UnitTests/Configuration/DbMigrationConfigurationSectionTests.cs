@@ -1,8 +1,6 @@
 ﻿using System.Configuration;
-using System.Linq;
 using DbMigrations.Client.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NSubstitute;
 
 namespace DbMigrations.UnitTests.Configuration
 {

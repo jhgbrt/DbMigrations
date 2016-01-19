@@ -7,6 +7,7 @@ using DbMigrations.Client.Application;
 using DbMigrations.Client.Configuration;
 using DbMigrations.Client.Infrastructure;
 using DbMigrations.Client.Resources;
+using Net.Code.ADONet;
 
 namespace DbMigrations.Client
 {
@@ -33,7 +34,7 @@ namespace DbMigrations.Client
                 return 1;
             }
 
-            var dbSpecifics = DbSpecifics.Get(config);
+            var dbSpecifics = DbQueries.Get(config);
             if (dbSpecifics != null && config.PersistConfiguration)
             {
                 SaveConfiguration(dbSpecifics);
@@ -111,7 +112,7 @@ namespace DbMigrations.Client
             return manager.ExecuteScripts(config.WhatIf, ScriptKind.PostMigration);
         }
 
-        private static void SaveConfiguration(DbSpecifics dbSpecifics)
+        private static void SaveConfiguration(DbQueries dbQueries)
         {
             var c = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
             var m = (DbMigrationsConfigurationSection) c.GetSection("migrationConfig");
@@ -120,11 +121,11 @@ namespace DbMigrations.Client
                 m = new DbMigrationsConfigurationSection();
                 c.Sections.Add("migrationConfig", m);
             }
-            dbSpecifics.SaveToConfig(m);
+            dbQueries.SaveToConfig(m);
             c.Save(ConfigurationSaveMode.Minimal);
         }
 
-        private static IMigrationManager CreateMigrationManager(Config config, IDb db, DbSpecifics queryConfig)
+        private static IMigrationManager CreateMigrationManager(Config config, IDb db, DbQueries queryConfig)
         {
             var database = new Database(db, queryConfig);
             var folder = new DirectoryInfo(config.Directory);

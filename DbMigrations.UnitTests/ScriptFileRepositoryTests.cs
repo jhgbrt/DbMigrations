@@ -1,9 +1,7 @@
-using System.Configuration.Internal;
 using System.IO;
 using System.Linq;
 using DbMigrations.Client.Resources;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NSubstitute;
 
 namespace DbMigrations.UnitTests
 {

@@ -4,9 +4,9 @@ using DbMigrations.Client.Infrastructure;
 
 namespace DbMigrations.Client.Resources
 {
-    class DbSpecifics
+    public class DbQueries
     {
-        public static DbSpecifics Get(Config config)
+        public static DbQueries Get(Config config)
         {
             var c = (DbMigrationsConfigurationSection) ConfigurationManager.GetSection("migrationConfig");
             if (!string.IsNullOrEmpty(c?.InvariantName))
@@ -28,26 +28,75 @@ namespace DbMigrations.Client.Resources
             return SqlServer.Instance(config);
         }
 
-        private static DbSpecifics FromConfigurationSection(DbMigrationsConfigurationSection config)
+        private static DbQueries FromConfigurationSection(DbMigrationsConfigurationSection config)
         {
             if (string.IsNullOrEmpty(config?.InvariantName))
                 return null;
 
-            return new DbSpecifics(
+            return new DbQueries(
                 config.InvariantName,
                 config.EscapeChar,
                 config.TableName,
                 config.Schema,
-                config.ToQuery(config.ConfigureTransaction),
-                config.ToQuery(config.CreateMigrationTable),
-                config.ToQuery(config.CountMigrationTables),
-                config.ToQuery(config.DropAllObjects)
+                config.ConfigureTransaction?.Sql ?? string.Empty,
+                config.CreateMigrationTable?.Sql ?? string.Empty,
+                config.CountMigrationTables?.Sql ?? string.Empty,
+                config.DropAllObjects?.Sql ?? string.Empty
                 );
         }
 
+        public DbQueries(string invariantName, string escapeCharacter, string tableName, string schema,
+            string configureTransactionStatement, string createTableTemplate, string countMigrationTablesStatement,
+            string dropAllObjectsStatement)
+        {
+            InvariantName = invariantName;
+            EscapeCharacter = escapeCharacter;
+            TableName = tableName;
+            Schema = schema;
+            ConfigureTransactionStatement = configureTransactionStatement;
+            CreateTableTemplate = createTableTemplate;
+            CountMigrationTablesStatement = countMigrationTablesStatement;
+            DropAllObjectsStatement = dropAllObjectsStatement;
+        }
+
+        private string InsertTemplate { get; } =
+            "INSERT INTO {TableName} (ScriptName, MD5, ExecutedOn, Content) " +
+            "VALUES ({EscapeCharacter}ScriptName, {EscapeCharacter}MD5, {EscapeCharacter}ExecutedOn, {EscapeCharacter}Content)"
+            ;
+
+        private string SelectTemplate { get; } =
+            "SELECT ScriptName, MD5, ExecutedOn, Content " +
+            "FROM {TableName} " +
+            "ORDER BY ScriptName ASC";
+
+        public string TableName { get; }
+        public string Schema { get; }
+        private string InvariantName { get; }
+        public string EscapeCharacter { get; }
+        public string ConfigureTransactionStatement { get; }
+        private string CreateTableTemplate { get; }
+        public string CountMigrationTablesStatement { get; }
+        public string DropAllObjectsStatement { get; }
+        public string InsertStatement => InsertTemplate.FormatWith(new {TableName, EscapeCharacter});
+        public string SelectStatement => SelectTemplate.FormatWith(new {TableName});
+        public string CreateTableStatement => CreateTableTemplate.FormatWith(new {TableName});
+
+        public void SaveToConfig(DbMigrationsConfigurationSection config)
+        {
+            config.InvariantName = InvariantName;
+            config.TableName = TableName;
+            config.Schema = Schema;
+            config.EscapeChar = EscapeCharacter;
+            config.CountMigrationTables.Sql = CountMigrationTablesStatement;
+            config.DropAllObjects.Sql = DropAllObjectsStatement;
+            config.ConfigureTransaction.Sql = ConfigureTransactionStatement;
+            config.CreateMigrationTable.Sql = CreateTableTemplate;
+        }
+
+        #region Implementations
         private static class SqlServer
         {
-            public static DbSpecifics Instance(Config config)
+            public static DbQueries Instance(Config config)
             {
                 var schema = config.Schema ?? "dbo";
                 var tableName = $"{schema}.Migrations";
@@ -55,10 +104,10 @@ namespace DbMigrations.Client.Resources
                 var escapeCharacter = "@";
                 var initTransaction = "SET XACT_ABORT ON";
 
-                return new DbSpecifics(
-                    invariantName, 
-                    escapeCharacter, 
-                    tableName, 
+                return new DbQueries(
+                    invariantName,
+                    escapeCharacter,
+                    tableName,
                     schema,
                     initTransaction,
                     CreateTableTemplate,
@@ -115,17 +164,17 @@ namespace DbMigrations.Client.Resources
 
         private static class Oracle
         {
-            public static DbSpecifics Instance(Config config)
+            public static DbQueries Instance(Config config)
             {
                 var schema = config.Schema ?? config.UserName;
                 var tableName = $"{schema}.MIGRATIONS";
                 var invariantName = "Oracle.ManagedDataAccess.Client";
                 var escapeCharacter = ":";
 
-                return new DbSpecifics(
-                    invariantName, 
-                    escapeCharacter, 
-                    tableName, schema, 
+                return new DbQueries(
+                    invariantName,
+                    escapeCharacter,
+                    tableName, schema,
                     string.Empty,
                     CreateTableTemplate,
                     CountMigrationTablesStatement, DropAllObjectsStatement);
@@ -157,9 +206,9 @@ namespace DbMigrations.Client.Resources
 
         private static class SqLite
         {
-            public static DbSpecifics Instance()
+            public static DbQueries Instance()
             {
-                return new DbSpecifics(
+                return new DbQueries(
                     "System.Data.SqLite",
                     "@", "Migrations", string.Empty, string.Empty
                     , CreateTableTemplate
@@ -185,19 +234,19 @@ namespace DbMigrations.Client.Resources
                   "FROM SQLITE_MASTER \r\n" +
                   "WHERE TYPE = 'table';";
         }
-        
+
         private static class SqlServerCe
         {
-            public static DbSpecifics Instance()
+            public static DbQueries Instance()
             {
                 var invariantName = "System.Data.SqlServerCe.4.0";
                 var escapeCharacter = "@";
                 var tableName = "Migrations";
-                return new DbSpecifics(
+                return new DbQueries(
                     invariantName,
-                    escapeCharacter, 
-                    tableName, 
-                    string.Empty, 
+                    escapeCharacter,
+                    tableName,
+                    string.Empty,
                     string.Empty
                     , CreateTableTemplate
                     , CountMigrationTablesStatement
@@ -222,52 +271,6 @@ namespace DbMigrations.Client.Resources
                   "SELECT \'DROP TABLE [\' + table_name + \']\' as Statement \r\n" +
                   "FROM information_schema.tables";
         }
-
-        private DbSpecifics(string invariantName, string escapeCharacter, string tableName, string schema,
-            string configureTransactionStatement, string createTableTemplate, string countMigrationTablesStatement,
-            string dropAllObjectsStatement)
-        {
-            InvariantName = invariantName;
-            EscapeCharacter = escapeCharacter;
-            TableName = tableName;
-            Schema = schema;
-            ConfigureTransactionStatement = configureTransactionStatement;
-            CreateTableTemplate = createTableTemplate;
-            CountMigrationTablesStatement = countMigrationTablesStatement;
-            DropAllObjectsStatement = dropAllObjectsStatement;
-        }
-
-        private string InsertTemplate { get; } =
-            "INSERT INTO {TableName} (ScriptName, MD5, ExecutedOn, Content) " +
-            "VALUES ({EscapeCharacter}ScriptName, {EscapeCharacter}MD5, {EscapeCharacter}ExecutedOn, {EscapeCharacter}Content)";
-
-        private string SelectTemplate { get; } =
-            "SELECT ScriptName, MD5, ExecutedOn, Content " +
-            "FROM {TableName} " +
-            "ORDER BY ScriptName ASC";
-
-        public string TableName { get; }
-        public string Schema { get; }
-        private string InvariantName { get; }
-        public string EscapeCharacter { get; }
-        public string ConfigureTransactionStatement { get; }
-        private string CreateTableTemplate { get; }
-        public string CountMigrationTablesStatement { get; }
-        public string DropAllObjectsStatement { get; }
-        public string InsertStatement => InsertTemplate.FormatWith(new {TableName, EscapeCharacter});
-        public string SelectStatement => SelectTemplate.FormatWith(new {TableName});
-        public string CreateTableStatement => CreateTableTemplate.FormatWith(new {TableName});
-
-        public void SaveToConfig(DbMigrationsConfigurationSection config)
-        {
-            config.InvariantName = InvariantName;
-            config.TableName = TableName;
-            config.Schema = Schema;
-            config.EscapeChar = EscapeCharacter;
-            config.CountMigrationTables.Sql = CountMigrationTablesStatement;
-            config.DropAllObjects.Sql = DropAllObjectsStatement;
-            config.ConfigureTransaction.Sql = ConfigureTransactionStatement;
-            config.CreateMigrationTable.Sql = CreateTableTemplate;
-        }
+        #endregion
     }
 }

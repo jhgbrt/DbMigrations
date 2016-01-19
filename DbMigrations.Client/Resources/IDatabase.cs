@@ -8,9 +8,7 @@ namespace DbMigrations.Client.Resources
         void RunInTransaction(string script);
         void EnsureMigrationsTable();
         void ClearAll();
-
         IList<Migration> GetMigrations();
-        void Insert(Migration item);
         void ApplyMigration(Migration migration);
     }
 }

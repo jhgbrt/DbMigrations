@@ -18,7 +18,7 @@ using Microsoft.CSharp.RuntimeBinder;
 // from there it should be discoverable.
 // inline SQL FTW!
 
-namespace DbMigrations.Client.Infrastructure
+namespace Net.Code.ADONet
 {
 
     public interface IConnectionFactory
@@ -54,14 +54,14 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="sqlQuery"></param>
         /// <returns>a CommandBuilder instance</returns>
-        CommandBuilder Sql(string sqlQuery);
+        ICommandBuilder Sql(string sqlQuery);
 
         /// <summary>
         /// Create a Stored Procedure command
         /// </summary>
         /// <param name="sprocName">name of the stored procedure</param>
         /// <returns>a CommandBuilder instance</returns>
-        CommandBuilder StoredProcedure(string sprocName);
+        ICommandBuilder StoredProcedure(string sprocName);
 
         /// <summary>
         /// Create a SQL command and execute it immediately (non query)
@@ -347,7 +347,7 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="sqlQuery"></param>
         /// <returns>a CommandBuilder instance</returns>
-        public CommandBuilder Sql(string sqlQuery)
+        public ICommandBuilder Sql(string sqlQuery)
         {
             return CreateCommand(CommandType.Text, sqlQuery);
         }
@@ -357,12 +357,12 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="sprocName">name of the sproc</param>
         /// <returns>a CommandBuilder instance</returns>
-        public CommandBuilder StoredProcedure(string sprocName)
+        public ICommandBuilder StoredProcedure(string sprocName)
         {
             return CreateCommand(CommandType.StoredProcedure, sprocName);
         }
 
-        private CommandBuilder CreateCommand(CommandType commandType, string command)
+        private ICommandBuilder CreateCommand(CommandType commandType, string command)
         {
             var cmd = Connection.CreateCommand();
             _config.PrepareCommand(cmd);
@@ -415,7 +415,180 @@ namespace DbMigrations.Client.Infrastructure
         }
     }
 
-    public class CommandBuilder
+    public interface ICommandBuilder
+    {
+        /// <summary>
+        /// The raw IDbCommand instance
+        /// </summary>
+        IDbCommand Command { get; }
+
+        /// <summary>
+        /// Executes the query and returns the result as a list of dynamic objects. 
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<dynamic> AsEnumerable();
+
+        /// <summary>
+        /// Executes the query and returns the result as a list of [T]. This method is slightly faster. 
+        /// than doing AsEnumerable().Select(selector). The selector is required to map objects as the 
+        /// underlying datareader is enumerated.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="selector">mapping function that transforms a datarecord (wrapped as a dynamic object) to an instance of type [T]</param>
+        /// <returns></returns>
+        IEnumerable<T> AsEnumerable<T>(Func<dynamic, T> selector);
+
+        IEnumerable<T> Select<T>(Func<dynamic, T> selector);
+
+        /// <summary>
+        /// Executes the query and returns the result as a list of lists
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<IEnumerable<dynamic>> AsMultiResultSet();
+
+        /// <summary>
+        /// Executes the command, returning the first column of the first result, converted to the type T
+        /// </summary>
+        /// <typeparam name="T">return type</typeparam>
+        /// <returns></returns>
+        T AsScalar<T>();
+
+        /// <summary>
+        /// Executes the command as a SQL statement, returning the number of rows affected
+        /// </summary>
+        int AsNonQuery();
+
+        /// <summary>
+        /// Executes the command as a datareader. Use this if you need best performance.
+        /// </summary>
+        /// <returns></returns>
+        IDataReader AsReader();
+
+        /// <summary>
+        /// Executes the command and fills a DataTable.
+        /// </summary>
+        /// <returns></returns>
+        DataTable AsDataTable();
+
+        /// <summary>
+        /// Executes the command as a statement, returning the number of rows affected asynchronously
+        /// This method is only supported if the underlying provider uses the ADO.Net base classes (i.e., their IDbCommand implementation
+        /// inherits from System.Data.DbCommand). Moreover, this async method only makes sense if the provider
+        /// implements the async behaviour by overriding the appropriate method.
+        /// </summary>
+        /// <returns></returns>
+        Task<int> AsNonQueryAsync();
+
+        /// <summary>
+        /// Executes the command, returning the first column of the first result, converted to the type T asynchronously. 
+        /// This method is only supported if the underlying provider uses the ADO.Net base classes (i.e., their IDbCommand implementation
+        /// inherits from System.Data.DbCommand). Moreover, this async method only makes sense if the provider
+        /// implements the async behaviour by overriding the appropriate method.
+        /// </summary>
+        /// <typeparam name="T">return type</typeparam>
+        /// <returns></returns>
+        Task<T> AsScalarAsync<T>();
+
+        /// <summary>
+        /// Executes the query and returns the result as a list of dynamic objects asynchronously
+        /// This method is only supported if the underlying provider uses the ADO.Net base classes (i.e., their IDbCommand implementation
+        /// inherits from System.Data.DbCommand). Moreover, this async method only makes sense if the provider
+        /// implements the async behaviour by overriding the appropriate method.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<object>> AsEnumerableAsync();
+
+        /// <summary>
+        /// Executes the query and returns the result as a list of [T] asynchronously
+        /// This method is only supported if the underlying provider uses the ADO.Net base classes (i.e., their IDbCommand implementation
+        /// inherits from System.Data.DbCommand). Moreover, this async method only makes sense if the provider
+        /// implements the async behaviour by overriding the appropriate method.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="selector">mapping function that transforms a datarecord (wrapped as a dynamic object) to an instance of type [T]</param>
+        /// <returns></returns>
+        Task<IEnumerable<T>> AsEnumerableAsync<T>(Func<object, T> selector);
+
+        /// <summary>
+        /// Executes the query and returns the result as a list of lists asynchronously
+        /// This method is only supported if the underlying provider uses the ADO.Net base classes (i.e., their IDbCommand implementation
+        /// inherits from System.Data.DbCommand). Moreover, this async method only makes sense if the provider
+        /// implements the async behaviour by overriding the appropriate method.
+        /// </summary>
+        /// <returns></returns>
+        Task<IEnumerable<IEnumerable<object>>> AsMultiResultSetAsync();
+
+        /// <summary>
+        /// Executes the command as a datareader. Use this if you need best performance.
+        /// </summary>
+        /// <returns></returns>
+        Task<IDataReader> AsReaderAsync();
+
+        /// <summary>
+        /// Executes the command and fills a DataTable.
+        /// </summary>
+        /// <returns></returns>
+        Task<DataTable> AsDataTableAsync();
+
+        /// <summary>
+        /// Sets the command text
+        /// </summary>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        ICommandBuilder WithCommandText(string text);
+
+        /// <summary>
+        /// Sets the command type
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        ICommandBuilder OfType(CommandType type);
+
+        /// <summary>
+        /// Adds a parameter for each item in the dictionary, with the key as the name of the parameter 
+        /// and the value as the corresponding parameter value
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        ICommandBuilder WithParameters(IDictionary<string,object> parameters);
+
+        /// <summary>
+        /// Adds a parameter for each property of the given object, with the property name as the name of the parameter 
+        /// and the property value as the corresponding parameter value
+        /// </summary>
+        /// <param name="parameters"></param>
+        /// <returns></returns>
+        ICommandBuilder WithParameters(object parameters);
+
+        /// <summary>
+        /// Builder method - sets the command timeout
+        /// </summary>
+        /// <param name="timeout"></param>
+        /// <returns></returns>
+        ICommandBuilder WithTimeout(TimeSpan timeout);
+
+        /// <summary>
+        /// Builder method - adds a name/value pair as parameter
+        /// </summary>
+        /// <param name="name">the parameter name</param>
+        /// <param name="value">the parameter value</param>
+        /// <returns>the same CommandBuilder instance</returns>
+        ICommandBuilder WithParameter(string name, object value);
+
+        /// <summary>
+        /// Builder method - adds a table-valued parameter. Only supported on SQL Server (System.Data.SqlClient)
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="name">parameter name</param>
+        /// <param name="values">list of values</param>
+        /// <param name="udtTypeName">name of the User-defined table type</param>
+        /// <returns></returns>
+        ICommandBuilder WithParameter<T>(string name, IEnumerable<T> values, string udtTypeName);
+
+        ICommandBuilder InTransaction(IDbTransaction tx);
+    }
+
+    public class CommandBuilder : ICommandBuilder
     {
         private readonly IDbCommand _command;
 
@@ -437,7 +610,7 @@ namespace DbMigrations.Client.Infrastructure
         /// Executes the query and returns the result as a list of dynamic objects. 
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<dynamic> AsEnumerable()
+        public virtual IEnumerable<dynamic> AsEnumerable()
         {
             return Execute().Reader().AsEnumerable().ToExpandoList();
         }
@@ -612,7 +785,7 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        public CommandBuilder WithCommandText(string text)
+        public ICommandBuilder WithCommandText(string text)
         {
             _command.CommandText = text;
             return this;
@@ -623,7 +796,7 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        public CommandBuilder OfType(CommandType type)
+        public ICommandBuilder OfType(CommandType type)
         {
             _command.CommandType = type;
             return this;
@@ -635,7 +808,7 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        public CommandBuilder WithParameters(IDictionary<string,object> parameters)
+        public ICommandBuilder WithParameters(IDictionary<string,object> parameters)
         {
             foreach (var item in parameters)
             {
@@ -650,7 +823,7 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="parameters"></param>
         /// <returns></returns>
-        public CommandBuilder WithParameters(object parameters)
+        public ICommandBuilder WithParameters(object parameters)
         {
             return WithParameters(ToDictionary(parameters));
         }
@@ -673,7 +846,7 @@ namespace DbMigrations.Client.Infrastructure
         /// </summary>
         /// <param name="timeout"></param>
         /// <returns></returns>
-        public CommandBuilder WithTimeout(TimeSpan timeout)
+        public ICommandBuilder WithTimeout(TimeSpan timeout)
         {
             Command.CommandTimeout = (int)timeout.TotalSeconds;
             return this;
@@ -685,7 +858,7 @@ namespace DbMigrations.Client.Infrastructure
         /// <param name="name">the parameter name</param>
         /// <param name="value">the parameter value</param>
         /// <returns>the same CommandBuilder instance</returns>
-        public CommandBuilder WithParameter(string name, object value)
+        public ICommandBuilder WithParameter(string name, object value)
         {
 
             IDataParameter p;
@@ -712,7 +885,7 @@ namespace DbMigrations.Client.Infrastructure
         /// <param name="values">list of values</param>
         /// <param name="udtTypeName">name of the User-defined table type</param>
         /// <returns></returns>
-        public CommandBuilder WithParameter<T>(string name, IEnumerable<T> values, string udtTypeName)
+        public ICommandBuilder WithParameter<T>(string name, IEnumerable<T> values, string udtTypeName)
         {
             var dataTable = values.ToDataTable();
 
@@ -727,7 +900,7 @@ namespace DbMigrations.Client.Infrastructure
         }
 
 
-        public CommandBuilder InTransaction(IDbTransaction tx)
+        public ICommandBuilder InTransaction(IDbTransaction tx)
         {
             Command.Transaction = tx;
             return this;

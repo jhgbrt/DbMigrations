@@ -3,8 +3,8 @@ using System.Data.Common;
 using System.IO;
 using System.Linq;
 using DbMigrations.Client;
-using DbMigrations.Client.Infrastructure;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Net.Code.ADONet;
 
 namespace DbMigrations.IntegrationTests
 {

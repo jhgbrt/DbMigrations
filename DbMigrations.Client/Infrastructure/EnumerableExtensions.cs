@@ -13,20 +13,16 @@ namespace DbMigrations.Client.Infrastructure
     }
     public struct Joined<TKey, TLeft, TRight>
     {
-        private readonly TKey _key;
-        private readonly TLeft _left;
-        private readonly TRight _right;
-
         public Joined(TKey key, TLeft left, TRight right)
         {
-            _key = key;
-            _left = left;
-            _right = right;
+            Key = key;
+            Left = left;
+            Right = right;
         }
 
-        public TKey Key { get { return _key; } }
-        public TLeft Left { get { return _left; } }
-        public TRight Right { get { return _right; } }
+        public TKey Key { get; }
+        public TLeft Left { get; }
+        public TRight Right { get; }
     }
 
     public static class EnumerableExtensions

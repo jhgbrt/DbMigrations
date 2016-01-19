@@ -5,7 +5,8 @@ using System.Data.Common;
 using System.IO;
 using System.Linq;
 using System.Text;
-using DbMigrations.Client.Infrastructure;
+using Mono.Options;
+using Net.Code.ADONet;
 
 namespace DbMigrations.Client
 {
