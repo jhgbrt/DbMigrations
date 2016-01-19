@@ -7,47 +7,6 @@ using DbMigrations.Client.Resources;
 
 namespace DbMigrations.Client.Application
 {
-    class BufferedWriter
-    {
-        readonly Logger _logger;
-        readonly Queue<string> _lines = new Queue<string>();
-        private int _flush;
-        private int _context = 2;
-
-        public BufferedWriter(Logger logger)
-        {
-            _logger = logger;
-        }
-
-        public void Write(string text)
-        {
-            foreach (var line in text.Lines())
-            {
-                if (_flush > 0)
-                {
-                    _logger.Write(ConsoleColor.Gray, line);
-                    _flush--;
-                }
-                else
-                {
-                    _lines.Enqueue(line);
-                }
-            }
-            while (_lines.Count > _context) _lines.Dequeue();
-        }
-
-        public void Write(string text, ConsoleColor color)
-        {
-            while (_lines.Any())
-            {
-                _logger.Write(ConsoleColor.Gray, _lines.Dequeue());
-            }
-            _logger.Write(color, text);
-            _flush = _context;
-        }
-
-    }
-
     public class MigrationManager : IMigrationManager
     {
         private Logger Logger { get; }
@@ -55,8 +14,8 @@ namespace DbMigrations.Client.Application
         private readonly IDatabase _database;
 
         public MigrationManager(
-            IScriptFileRepository scriptFileRepository, 
-            IDatabase database, 
+            IScriptFileRepository scriptFileRepository,
+            IDatabase database,
             Logger logger)
         {
             _scriptFileRepository = scriptFileRepository;
@@ -81,7 +40,7 @@ namespace DbMigrations.Client.Application
                 Logger.InfoLine("Database is consistent; no migrations to execute.");
                 return true;
             }
-            
+
             var ok = ApplyMigrations(whatif, syncOnly, migrations);
 
             if (!ok)
@@ -89,29 +48,11 @@ namespace DbMigrations.Client.Application
                 foreach (var migration in migrations)
                 {
                     Logger.InfoLine(migration.ToString());
-                    if (migration.IsConsistent) 
+                    if (migration.IsConsistent)
                         continue;
-                    if (migration.HasChangedOnDisk)
-                    {
-                        var writer = new BufferedWriter(Logger);
-                        var diffs = Diff.Compute(migration.Migration.Content, migration.Script.Content);
-                        foreach (var diff in diffs)
-                        {
-                            switch (diff.Operation)
-                            {
-                                case Operation.Equal:
-                                    writer.Write(diff.Text);
-                                    break;
-                                case Operation.Delete:
-                                    writer.Write("(" + diff.Text + ")", ConsoleColor.DarkRed);
-                                    break;
-                                case Operation.Insert:
-                                    writer.Write(diff.Text, ConsoleColor.DarkGreen);
-                                    break;
-                            }
-                        }
-                        
-                    }
+                    if (!migration.HasChangedOnDisk)
+                        continue;
+                    WriteDiffs(migration);
                 }
                 Logger.Line();
                 return false;
@@ -119,7 +60,27 @@ namespace DbMigrations.Client.Application
 
             return true;
         }
-       
+
+        private void WriteDiffs(MigrationScript migration)
+        {
+            var diffs = Diff.Compute(migration.Migration.Content, migration.Script.Content);
+            foreach (var diff in diffs)
+            {
+                switch (diff.Operation)
+                {
+                    case Operation.Equal:
+                        Logger.Info(diff.Text);
+                        break;
+                    case Operation.Delete:
+                        Logger.Write(ConsoleColor.Red, "(" + diff.Text + ")");
+                        break;
+                    case Operation.Insert:
+                        Logger.Write(ConsoleColor.Green, diff.Text);
+                        break;
+                }
+            }
+        }
+
         private List<MigrationScript> GetMigrations()
         {
             var migrations = _database.GetMigrations();
@@ -135,10 +96,10 @@ namespace DbMigrations.Client.Application
         /// <summary>
         /// Zip db migrations with scripts on disk
         /// </summary>
-        public static IEnumerable<MigrationScript> ZipWithScripts(IEnumerable<Migration> left, IEnumerable<Script> right)
+        private static IEnumerable<MigrationScript> ZipWithScripts(IEnumerable<Migration> left, IEnumerable<Script> right)
         {
-            if (left == null) throw new ArgumentNullException("left");
-            if (right == null) throw new ArgumentNullException("right");
+            if (left == null) throw new ArgumentNullException(nameof(left));
+            if (right == null) throw new ArgumentNullException(nameof(right));
 
             var result = left.FullOuterJoin(right, m => m.ScriptName, s => s.ScriptName)
                 .OrderBy(j => j.Key)
@@ -146,7 +107,7 @@ namespace DbMigrations.Client.Application
                 .ToList();
 
             result.ConnectMigrations();
-            
+
             return result;
         }
 
@@ -244,7 +205,7 @@ namespace DbMigrations.Client.Application
     {
         public static void ConnectMigrations(this IList<MigrationScript> result)
         {
-            foreach (var item in result.Zip(result.Skip(1), (l, r) => new { item = l, next = r }))
+            foreach (var item in result.Zip(result.Skip(1), (l, r) => new {item = l, next = r}))
             {
                 item.item.Next = item.next;
             }
