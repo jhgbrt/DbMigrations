@@ -1,4 +1,6 @@
-﻿# DbMigrations
+[![Build status](https://ci.appveyor.com/api/projects/status/9y7tm6ujwg6d05kv?svg=true)](https://ci.appveyor.com/project/jhgbrt/dbmigrations)
+
+# DbMigrations
 
 Use this utility to execute DDL and SQL scripts against a database
 
