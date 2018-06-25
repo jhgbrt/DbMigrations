@@ -15,10 +15,10 @@ namespace DbMigrations.Client.Model
 
         public DateTime ExecutedOn { get; }
 
-        [StringLength(255)]
+        [StringLength(int.MaxValue)]
         public string Content { get; }
 
-        [StringLength(int.MaxValue)]
+        [StringLength(255)]
         public string ScriptName { get; }
 
         [StringLength(32)]
