@@ -13,7 +13,7 @@ namespace DbMigrations.Client.Infrastructure
         Delete, Insert, Equal
     }
 
-    public class Diff
+    public struct Diff
     {
         internal static Diff Create(Operation operation, string text, int? lineNumber = null)
         {
@@ -63,14 +63,13 @@ namespace DbMigrations.Client.Infrastructure
         /// <returns></returns>
         public override bool Equals(Object obj)
         {
-            var p = obj as Diff;
-            return p != null && p.Operation == Operation && p.Text == Text;
+            if (ReferenceEquals(obj, null)) return false;
+            return Equals((Diff) obj, this);
         }
 
         public bool Equals(Diff obj)
         {
-            return obj != null && obj.Operation == Operation && obj.Text == Text;
-
+            return obj.Operation == Operation && obj.Text == Text;
         }
 
         public override int GetHashCode()
@@ -124,7 +123,7 @@ namespace DbMigrations.Client.Infrastructure
 #region Implementation
     namespace Implementation
     {
-        class DiffAlgorithm
+        static class DiffAlgorithm
         {
 
             /// <summary>
@@ -1137,49 +1136,42 @@ namespace DbMigrations.Client.Infrastructure
                 }
             }
         }
-        internal class HalfMatchResult : IEquatable<HalfMatchResult>
+        struct HalfMatchResult : IEquatable<HalfMatchResult>
         {
-            private HalfMatchResult()
-                : this(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty)
-            {
-            }
             public HalfMatchResult(string prefix1, string suffix1, string prefix2, string suffix2, string commonMiddle)
             {
-                if (prefix1 == null) throw new ArgumentNullException("prefix1");
-                if (prefix2 == null) throw new ArgumentNullException("prefix2");
-                if (suffix1 == null) throw new ArgumentNullException("suffix1");
-                if (suffix2 == null) throw new ArgumentNullException("suffix2");
-                if (commonMiddle == null) throw new ArgumentNullException("commonMiddle");
-                Prefix1 = prefix1;
-                Suffix1 = suffix1;
-                Prefix2 = prefix2;
-                Suffix2 = suffix2;
-                CommonMiddle = commonMiddle;
+                Prefix1 = prefix1 ?? throw new ArgumentNullException(nameof(prefix1));
+                Suffix1 = suffix1 ?? throw new ArgumentNullException(nameof(suffix1));
+                Prefix2 = prefix2 ?? throw new ArgumentNullException(nameof(prefix2));
+                Suffix2 = suffix2 ?? throw new ArgumentNullException(nameof(suffix2));
+                CommonMiddle = commonMiddle ?? throw new ArgumentNullException(nameof(commonMiddle));
             }
 
-            public string Prefix1 { get; private set; }
-            public string Suffix1 { get; private set; }
-            public string CommonMiddle { get; private set; }
-            public string Prefix2 { get; private set; }
-            public string Suffix2 { get; private set; }
-            public bool IsEmpty { get { return string.IsNullOrEmpty(CommonMiddle); } }
+            public readonly string Prefix1;
+            public readonly string Suffix1;
+            public readonly string CommonMiddle;
+            public readonly string Prefix2;
+            public readonly string Suffix2;
+            public bool IsEmpty => string.IsNullOrEmpty(CommonMiddle);
 
             public static readonly HalfMatchResult Empty = new HalfMatchResult();
 
             public override bool Equals(object obj)
             {
                 if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
                 if (obj.GetType() != GetType()) return false;
                 return Equals((HalfMatchResult)obj);
             }
 
             public bool Equals(HalfMatchResult other)
             {
-                if (ReferenceEquals(null, other)) return false;
-                if (ReferenceEquals(this, other)) return true;
-                return string.Equals(Prefix1, other.Prefix1) && string.Equals(Suffix1, other.Suffix1) && string.Equals(CommonMiddle, other.CommonMiddle) && string.Equals(Prefix2, other.Prefix2) && string.Equals(Suffix2, other.Suffix2);
+                return string.Equals(Prefix1, other.Prefix1) 
+                    && string.Equals(Suffix1, other.Suffix1) 
+                    && string.Equals(CommonMiddle, other.CommonMiddle) 
+                    && string.Equals(Prefix2, other.Prefix2) 
+                    && string.Equals(Suffix2, other.Suffix2);
             }
+
             public override int GetHashCode()
             {
                 unchecked
@@ -1213,7 +1205,7 @@ namespace DbMigrations.Client.Infrastructure
                 return left.CommonMiddle.Length < right.CommonMiddle.Length;
             }
         }
-        public class LineToCharCompressor
+        class LineToCharCompressor
         {
             // e.g. _lineArray[4] == "Hello\n"
             // e.g. _lineHash["Hello\n"] == 4
