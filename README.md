@@ -4,7 +4,7 @@
 
 Use this utility to execute DDL and SQL scripts against a database
 
-##How it works
+## How it works
 
 The tool is a command-line utility that you point at a folder containing
 sql scripts, which (by convention) need to be organized in a certain way.
@@ -15,7 +15,7 @@ Here's a small example to get a feel of it:
 This command runs all migration scripts in the folder pointed to against a
 SQL Express database, using integrated security. 
 
-##Organizing the scripts
+## Organizing the scripts
 
 By default, first all scripts in a folder called 'Migrations'
 will be executed (in strict alphabetical order). Scripts may be
@@ -24,7 +24,7 @@ treated in alphabetical order. However, once a migration script
 has been performed from a 'newer' folder, it is not allowed to
 add new migrations in an 'earlier' folder.
 
-##Tracking the migrations
+## Tracking the migrations
 Migrations are tracked inside the database, in a table called 'Migrations'.
 Once a migration has been performed, it can not be changed. Also, new
 versions of a migration package should always include all previous
@@ -38,10 +38,9 @@ depends on the database on which the migrations are run):
     Content    (string): the full content of the script
     ExecutedOn (date)  : the (local) date/time when this script was executed
 
-##Additional (idempotent) scripts
+## Additional (idempotent) scripts
 For added convenience, the tool also supports running additional sql
 scripts, in addition to the migration scripts themselfves.
-
 
 After the migrations have been run, by default *all* scripts in *all* other
 subfolders are executed. These scripts can be data loads, updates of
@@ -50,13 +49,13 @@ scripts should be **idempotent** at all times, and consistent with the
 current state of the database as it is represented by the set of
 migrations.
 
-It is possible fine-tune this behaviour and have a pre-migration phase as well, using the
+It is possible to fine-tune this behaviour and have a pre-migration phase as well, using the
 -pre and -post switches, where you specify a comma-seperated list of folders that must
 be executed before resp. after the migrations. It is *highly* recommended to only
 include 'generic', idem-potent scripts in the pre-migration phase, otherwise this folder
 will very quickly become a source of severe headaches.
 
-##Example
+## Example
 
 Given this folder structure:
 
@@ -84,7 +83,7 @@ The scripts in this structure will be run in this order:
     Scripts\02_ViewsAndSprocs\001_views.sql
     Scripts\02_ViewsAndSprocs\002_sprocs.sql
 
-##Command line options
+## Command line options
 
       --server=VALUE         
 The db server. For SQL Server, this is a string
@@ -148,7 +147,7 @@ Will clear the database and re-run all migrations.
 When used with --reinitialize, allows to restage
                                a remote db. Use with care!
 
-##Additional examples
+## Additional examples
 
     migrate.exe --directory=path/to/scripts --reinitialize \
                 --server=localhost:1521/XE --user=(user) --password=(pass) \
