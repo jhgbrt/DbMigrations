@@ -75,9 +75,9 @@ namespace DbMigrations.Client
 
                     Func<IMigrationManager, Config, bool>[] workflow = 
                     {
-                        (m,c) => PreMigration(m, c),
-                        (m,c) => Migration(m, c),
-                        (m,c) => PostMigration(m, c)
+                        PreMigration,
+                        Migration,
+                        PostMigration
                     };
 
                     var result = workflow.All(action => action(manager, config));
